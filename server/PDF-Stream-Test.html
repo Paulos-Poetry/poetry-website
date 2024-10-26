@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Stream Test</title>
+</head>
+<body>
+    <h1>PDF Stream Test</h1>
+    <button onclick="fetchAndDisplayPDF()">Load PDF</button>
+    <iframe id="pdfViewer" width="600" height="800" style="display:none;"></iframe>
+
+    <script>
+        function fetchAndDisplayPDF() {
+            const translationId = '671c3ebadae35cc1469f05b9'; // Replace with the actual ID of the PDF document
+
+            fetch(`http://localhost:5000/translations/stream/${translationId}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not OK');
+                    return response.blob(); // Convert response to a Blob (binary large object)
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const pdfViewer = document.getElementById('pdfViewer');
+                    pdfViewer.src = url;
+                    pdfViewer.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching PDF:', error);
+                });
+        }
+    </script>
+</body>
+</html>

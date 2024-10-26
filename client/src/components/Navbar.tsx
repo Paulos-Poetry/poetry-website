@@ -86,6 +86,15 @@ const Navbar: React.FC = () => {
             </li>
           )}
 
+          {/* Conditionally show the Translation Dashboard link if the user is an admin */}
+          {isAdmin && (
+              <li>
+                <Link to={BASE_URL + "/translation/admin"} onClick={toggleMenu}>
+                  Translation Dashboard
+                </Link>
+              </li>
+          )}
+
           {/* Show Logout as a button */}
           {isLoggedIn ? (
             <li className="logout">

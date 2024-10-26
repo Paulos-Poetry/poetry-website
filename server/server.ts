@@ -5,6 +5,7 @@ import cors from 'cors';
 
 import userRoutes from './routes/user';  // Import user routes
 import poetryRoutes from './routes/poetry';  // Import user routes
+import translationRoutes from './routes/translation';  // Import user routes
 
 dotenv.config();  // Load environment variables
 
@@ -15,6 +16,7 @@ app.use(cors());
 // Mount the user routes
 app.use(userRoutes);
 app.use(poetryRoutes);
+app.use(translationRoutes);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI!, {})

@@ -1,0 +1,40 @@
+@import './AdminDashboard.scss';
+
+.translations-dashboard {
+  .button-container {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .translation-management {
+    padding-top: 30px;
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 25px;
+    }
+
+    .translation-actions {
+      display: flex;
+      justify-content: space-between;
+
+      button {
+        width: 48%;
+        padding: 10px;
+        background-color: #00203f;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+          background-color: darken(#00203f, 10%);
+        }
+      }
+    }
+  }
+}

@@ -1,45 +1,65 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import "../styles/TranslationsDetailPage.scss";
-const URL = import.meta.env.VITE_ADDRESS;
 
-interface Translation {
-  title: string;
-  contentEnglish: string;
-  contentGreek: string; // Add this here
-}
+const URL = import.meta.env.VITE_ADDRESS;
 
 const TranslationsDetailPage: React.FC = () => {
   const { id } = useParams();
-  const [translation, setTranslation] = useState<Translation | null>(null);
-  const [language, setLanguage] = useState<"english" | "greek">("english");
+  const location = useLocation();
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfTitle, setPdfTitle] = useState<string>("PDF");
 
   useEffect(() => {
-    const fetchTranslation = async () => {
-      const response = await axios.get(`${URL}/translations/${id}`);
-      setTranslation(response.data);
+    let blobUrl: string | null = null;
+
+    const fetchPdf = async () => {
+      try {
+        const response = await axios.get(`${URL}/translations/stream/${id}`, {
+          responseType: "blob",
+        });
+
+        const response2 = await axios.get(`${URL}/translations/info/${id}`)
+        if (response2.status === 200) {
+          if (response2.data.title) setPdfTitle(response2.data.title);
+        }
+
+        if (response.status === 200) {
+          const blob = new Blob([response.data], { type: "application/pdf" });
+          blobUrl = window.URL.createObjectURL(blob);
+          setPdfUrl(blobUrl);
+        } else {
+          console.error("Failed to fetch PDF, status:", response.status);
+        }
+      } catch (error) {
+        console.error("Error fetching PDF:", error);
+      }
     };
-    fetchTranslation();
-  }, [id]);
+
+    fetchPdf();
+
+    return () => {
+      if (blobUrl) {
+        window.URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [id, location.state]);
 
   return (
-    <div className="translations-detail">
-      {translation ? (
-        <>
-          <h2>{translation.title}</h2>
-          <button onClick={() => setLanguage("english")}>English</button>
-          <button onClick={() => setLanguage("greek")}>Greek</button>
-          <p>
-            {language === "english"
-              ? translation.contentEnglish
-              : translation.contentGreek}
-          </p>
-        </>
-      ) : (
-        <p>Loading...</p>
-      )}
-    </div>
+      <div className="translations-detail">
+        <h2>{pdfTitle}</h2>
+        {pdfUrl ? (
+            <iframe
+                src={pdfUrl}
+                width="100%"
+                height="800px"
+                title="Translation PDF"
+            ></iframe>
+        ) : (
+            <p>Loading PDF...</p>
+        )}
+      </div>
   );
 };
 

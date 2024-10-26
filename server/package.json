@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only server.ts"
+    "dev": "ts-node-dev --respawn --transpile-only server.ts",
+    "start": "ts-node-dev --respawn --transpile-only server.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,7 @@
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.0",
+    "multer": "^1.4.5-lts.1",
     "react-quill": "^2.0.0",
     "server": "file:"
   },
@@ -23,6 +25,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^1.4.12",
     "@types/node": "^22.7.4",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.2"
