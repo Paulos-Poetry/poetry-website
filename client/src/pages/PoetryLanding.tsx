@@ -1,33 +1,52 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import "../styles/PoetryLanding.scss"; // Assuming this SCSS file contains the styles
+import "../styles/PoetryLanding.scss";
 import { BASE_URL } from "../constants";
 const URL = import.meta.env.VITE_ADDRESS;
 
 interface Poem {
   _id: string;
   title: string;
-  contentEnglish: string;
-  contentGreek: string;
+  contentEnglish?: string;
+  contentGreek?: string;
+  fileUrl?: string; // Optional for PDFs
 }
 
 const PoetryLanding: React.FC = () => {
   const [poems, setPoems] = useState<Poem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch poems from the API
+  // Fetch poems and PDFs from the API
   useEffect(() => {
-    const fetchPoems = async () => {
+    const fetchPoemsAndPdfs = async () => {
       try {
-        const response = await axios.get(`${URL}/poetry`);
-        setPoems(response.data);
+        // Fetch poems:
+        const poemResponse = await axios.get(`${URL}/poetry`);
+        const poems = poemResponse.data;
+
+        // Fetch PDFs:
+        const pdfResponse = await axios.get(`${URL}/translations/all`);
+        const pdfs = pdfResponse.data;
+
+        // Filter PDFs with "POEM" in the title:
+        const poemPdfs = pdfs
+          .filter((pdf: any) => pdf.title && pdf.title.startsWith("POEM"))
+          .map((pdf: any) => ({
+            _id: pdf._id,
+            title: pdf.title.replace(/\bPOEM\b\s?/g, ''), // Remove "POEM" from the title
+            fileUrl: `${URL}/translations/stream/${pdf._id}`, // Build file URL
+          }));
+
+        // Combine poems and filtered PDFs:
+        setPoems([...poems, ...poemPdfs]);
       } catch (error) {
-        console.error("Error fetching poems:", error);
-        setError("Failed to fetch poems.");
+        console.error("Error fetching poems or PDFs:", error);
+        setError("Failed to fetch poems or PDFs.");
       }
     };
-    fetchPoems();
+
+    fetchPoemsAndPdfs();
   }, []);
 
   return (
@@ -37,20 +56,33 @@ const PoetryLanding: React.FC = () => {
       <ul className="poetry-list">
         {poems.map((poem) => (
           <li key={poem._id} className="poetry-card">
-            <Link
-              to={`${BASE_URL}/poetry/${poem._id}`}
-              className="poetry-card-link"
-            >
-              <h1 className="poem-title">{poem.title}</h1>
-              {/* Render a snippet of the content with HTML formatting */}
-              <div
-                className="poem-snippet"
-                dangerouslySetInnerHTML={{
-                  __html: poem.contentEnglish.slice(0, 200),
-                }}
-              />
-              <p className="read-more">Read More</p>
-            </Link>
+            {poem.fileUrl ? (
+              // For PDFs
+              <a
+                href={poem.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="poetry-card-link"
+              >
+                <h1 className="poem-title">{poem.title}</h1>
+                <p className="read-more">View PDF</p>
+              </a>
+            ) : (
+              // For regular poems
+              <Link
+                to={`${BASE_URL}/poetry/${poem._id}`}
+                className="poetry-card-link"
+              >
+                <h1 className="poem-title">{poem.title}</h1>
+                <div
+                  className="poem-snippet"
+                  dangerouslySetInnerHTML={{
+                    __html: poem.contentEnglish?.slice(0, 200) || "",
+                  }}
+                />
+                <p className="read-more">Read More</p>
+              </Link>
+            )}
           </li>
         ))}
       </ul>

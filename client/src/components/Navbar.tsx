@@ -88,11 +88,11 @@ const Navbar: React.FC = () => {
 
           {/* Conditionally show the Translation Dashboard link if the user is an admin */}
           {isAdmin && (
-              <li>
-                <Link to={BASE_URL + "/translation/admin"} onClick={toggleMenu}>
-                  Translation Dashboard
-                </Link>
-              </li>
+            <li>
+              <Link to={BASE_URL + "/translation/admin"} onClick={toggleMenu}>
+                Translation & PDF Dashboard
+              </Link>
+            </li>
           )}
 
           {/* Show Logout as a button */}

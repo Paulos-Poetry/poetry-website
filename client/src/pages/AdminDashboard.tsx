@@ -4,6 +4,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css"; // Import Quill styles
 import "../styles/AdminDashboard.scss";
 const URL = import.meta.env.VITE_ADDRESS;
+import { useNavigate } from "react-router-dom"; // For navigation
 
 // Define the Poem and User interface for TypeScript
 interface Poem {
@@ -24,6 +25,7 @@ const axiosInstance = axios.create({
 });
 
 const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate(); // Get the navigate function from useNavigate hook
   const [poems, setPoems] = useState<Poem[]>([]); // Initialize as an empty array for poems
   const [users, setUsers] = useState<User[]>([]); // Initialize as an empty array for users
   const [selectedPoem, setSelectedPoem] = useState<Poem | null>(null); // Track the selected poem
@@ -226,6 +228,10 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handlePdfRedirect = () => {
+    navigate("/translation/admin", { state: { prefillTitle: "POEM " } });
+  };
+
   return (
     <div className="admin-dashboard">
       <h2>{editMode ? "Edit Poem" : "Add New Poem"}</h2>
@@ -273,6 +279,15 @@ const AdminDashboard: React.FC = () => {
             }}
           >
             Reset Poem
+          </button>
+        </div>
+        <div className="pdf-button-container">
+          <button
+            type="button"
+            onClick={handlePdfRedirect}
+            className="redirect-to-pdf"
+          >
+            Add PDF (Redirect)
           </button>
         </div>
       </form>
