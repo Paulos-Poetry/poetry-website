@@ -229,7 +229,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handlePdfRedirect = () => {
-    navigate("/translation/admin", { state: { prefillTitle: "POEM" } });
+    navigate("/translation/admin", { state: { prefillTitle: "POEM " } });
   };
 
   return (
