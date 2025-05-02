@@ -1,0 +1,70 @@
+.translations-dashboard {
+  padding: 40px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+
+  h2,
+  h3 {
+    color: #00203f;
+    text-align: center;
+  }
+
+  // Global button style for all buttons in this dashboard
+  button {
+    padding: 10px 20px;
+    background-color: #0056b3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      background-color: #004494;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  // Red style for reset/cancel buttons
+  .reset-button {
+    background-color: #e74c3c;
+
+    &:hover {
+      background-color: #c0392b;
+    }
+  }
+
+  // Container for Update / Reset buttons
+  .button-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  // Container for Cancel Edit / Delete Translation
+  .translation-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  // Translation management section
+  .translation-management {
+    padding-top: 30px;
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 25px;
+    }
+  }
+}

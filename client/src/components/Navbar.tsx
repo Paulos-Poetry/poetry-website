@@ -77,22 +77,26 @@ const Navbar: React.FC = () => {
         </ul>
 
         <div className="navbar-bottom">
-          {/* Conditionally show the Admin Dashboard link if the user is an admin */}
+          {/* Conditionally show the Admin Dashboard links if the user is an admin */}
           {isAdmin && (
-            <li>
-              <Link to={BASE_URL + "/admin"} onClick={toggleMenu}>
-                Admin Dashboard
-              </Link>
-            </li>
-          )}
-
-          {/* Conditionally show the Translation Dashboard link if the user is an admin */}
-          {isAdmin && (
-            <li>
-              <Link to={BASE_URL + "/translation/admin"} onClick={toggleMenu}>
-                Translation & PDF Dashboard
-              </Link>
-            </li>
+            <>
+              <li className="admin-subheader">Admin</li>
+              <li>
+                <Link to={BASE_URL + "/admin"} onClick={toggleMenu}>
+                  User Management
+                </Link>
+              </li>
+              <li>
+                <Link to={BASE_URL + "/admin/poems"} onClick={toggleMenu}>
+                  Poem Management
+                </Link>
+              </li>
+              <li>
+                <Link to={BASE_URL + "/admin/translations"} onClick={toggleMenu}>
+                  Translation Management
+                </Link>
+              </li>
+            </>
           )}
 
           {/* Show Logout as a button */}

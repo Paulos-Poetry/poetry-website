@@ -19,7 +19,10 @@ const TranslationsLanding: React.FC = () => {
       try {
         const response = await axios.get(`${URL}/translations/all`);
         console.log(response);
-        setTranslations(response.data);
+        const nonPoemTranslations = response.data.filter(
+          (item: Translation) => !item.title.startsWith("POEM")
+        );
+        setTranslations(nonPoemTranslations);
       } catch (error) {
         console.error("Error fetching translations:", error);
         setError("Failed to fetch translations.");

@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useLocation } from "react-router-dom"; // Import useLocation
-import "../styles/TranslationAdmin.scss";
+import { useLocation } from "react-router-dom";
+import "../styles/TranslationDashboard.scss";
 const URL = import.meta.env.VITE_ADDRESS;
 
 interface Translation {
   _id: string;
   title: string;
   contentType: string;
-  date?: string; // Add date field to interface
+  date?: string;
 }
 
 const axiosInstance = axios.create({
   baseURL: URL,
 });
 
-const TranslationsDashboard: React.FC = () => {
-  const location = useLocation(); // Get location to detect state
+const TranslationDashboard: React.FC = () => {
+  const location = useLocation();
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [selectedTranslation, setSelectedTranslation] =
     useState<Translation | null>(null);
@@ -24,17 +24,17 @@ const TranslationsDashboard: React.FC = () => {
   const [date, setDate] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [editMode, setEditMode] = useState(false);
+  //@ts-ignore
   const [loading, setLoading] = useState(true);
+  //@ts-ignore
   const [error, setError] = useState<string | null>(null);
 
-  // Detect prefilled title on redirection
   useEffect(() => {
     if (location.state && location.state.prefillTitle) {
       setTitle(location.state.prefillTitle);
     }
   }, [location.state]);
 
-  // Fetch existing translations
   useEffect(() => {
     const fetchTranslations = async () => {
       try {
@@ -197,4 +197,4 @@ const TranslationsDashboard: React.FC = () => {
   );
 };
 
-export default TranslationsDashboard;
+export default TranslationDashboard;

@@ -77,11 +77,16 @@ const PoetryLanding: React.FC = () => {
                 <div
                   className="poem-snippet"
                   dangerouslySetInnerHTML={{
-                    __html: poem.contentEnglish?.slice(0, 200) || "",
+                    __html:
+                      poem.contentEnglish?.trim() === "This work has no translation yet..."
+                        ? poem.contentGreek?.slice(0, 60) || "<i>(No content available)</i>"
+                        : poem.contentEnglish?.slice(0, 200) || "<i>(No content available)</i>",
                   }}
                 />
+
                 <p className="read-more">Read More</p>
               </Link>
+
             )}
           </li>
         ))}

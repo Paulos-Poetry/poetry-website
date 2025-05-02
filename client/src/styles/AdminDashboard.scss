@@ -13,15 +13,42 @@
     text-align: center;
   }
 
+  .centered-button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; // aligned to the left
+    margin-top: 30px;
+    gap: 10px;
+
+    button {
+      padding: 12px 24px;
+      background-color: #0056b3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+
+      &:hover {
+        background-color: #004494;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      &:focus {
+        outline: none;
+      }
+    }
+
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+  }
+
   form {
     margin-bottom: 40px;
     justify-content: space-between; /* Spread buttons to left and right */
-
-    .centered-button {
-      display: flex;
-      justify-content: center;
-      margin-top: 30px;
-    }
 
     button {
       padding: 15px 25px;
