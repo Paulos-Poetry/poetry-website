@@ -15,7 +15,8 @@ import Navbar from "./components/Navbar";
 import { BASE_URL } from "./constants.ts";
 import TranslationsLanding from "./pages/TranslationsLanding.tsx";
 import TranslationsDetailPage from "./pages/TranslationsDetailPage.tsx";
-import TranslationsDashboard from "./pages/TranslationAdmin.tsx";
+import PoemDashboard from "./pages/PoemDashboard";
+import TranslationDashboard from "./pages/TranslationDashboard";
 
 // Function to check if the user is an admin
 const isAdmin = () => {
@@ -52,12 +53,20 @@ const App: React.FC = () => {
             }
           />
           <Route
-              path={"translation/admin"}
-              element={
-                <ProtectedAdminRoute>
-                  <TranslationsDashboard />
-                </ProtectedAdminRoute>
-              }
+            path={"/admin/poems"}
+            element={
+              <ProtectedAdminRoute>
+                <PoemDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path={"/admin/translations"}
+            element={
+              <ProtectedAdminRoute>
+                <TranslationDashboard />
+              </ProtectedAdminRoute>
+            }
           />
         </Routes>
       </div>
