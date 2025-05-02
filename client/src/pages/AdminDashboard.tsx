@@ -75,6 +75,11 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handlePdfRedirect = () => {
+    navigate("/translation/admin", { state: { prefillTitle: "POEM " } });
+  };
+
+
   return (
     <div className="admin-dashboard">
       <h2>Admin Dashboard - Manage Users</h2>
