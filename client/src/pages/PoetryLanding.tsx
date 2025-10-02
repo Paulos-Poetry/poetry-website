@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import "../styles/PoetryLanding.scss";
@@ -6,6 +6,7 @@ import { BASE_URL } from "../constants";
 import BackendSwitcher from "../components/BackendSwitcher";
 import { useBackend } from "../contexts/BackendContext";
 import { SupabaseService } from "../services/apiService";
+import { toPdfBlobFromPayload } from "../services/pdfUtils";
 
 const URL = import.meta.env.VITE_ADDRESS;
 
@@ -23,6 +24,8 @@ const PoetryLanding: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { currentBackend } = useBackend();
+
+  const createdUrlsRef = useRef<string[]>([]);
 
   // Fetch poems and PDFs from the API
   const fetchPoemsAndPdfs = useCallback(async () => {
@@ -46,11 +49,42 @@ const PoetryLanding: React.FC = () => {
         // Filter PDF translations with "POEM" in the title
         const poemPdfs = supabaseTranslations
           .filter(pdf => pdf.title && pdf.title.startsWith("POEM"))
-          .map(pdf => ({
-            _id: pdf._id || '',
-            title: pdf.title.replace("POEM", ""), // Remove "POEM" from the title
-            fileUrl: `data:application/pdf;base64,${pdf.pdf_data}`, // For Supabase, use base64 data
-          }));
+          .map(pdf => {
+            const id = pdf._id || '';
+            const title = pdf.title.replace("POEM", "");
+
+            // Narrow types for safety
+            const payload = (pdf as unknown) as { pdf_data?: unknown; content_type?: string };
+
+            // Try to convert the stored payload to a Blob and create an object URL
+            let fileUrl: string | undefined;
+            try {
+              const blob = toPdfBlobFromPayload(payload.pdf_data, payload.content_type || 'application/pdf');
+              if (blob) {
+                const url = window.URL.createObjectURL(blob);
+                // Track created URLs for cleanup
+                createdUrlsRef.current.push(url);
+                fileUrl = url;
+              }
+            } catch (e) {
+              console.warn('Failed to convert pdf payload to blob for', id, e);
+            }
+
+            // Fallback: only use data URI if payload.pdf_data is likely base64
+            if (!fileUrl && typeof payload.pdf_data === 'string') {
+              const s = payload.pdf_data.trim();
+              const normalized = s.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+              const isBase64 = /^[A-Za-z0-9+/=]+$/.test(normalized) && (normalized.length % 4 === 0 || normalized.endsWith('='));
+              if (isBase64) {
+                fileUrl = `data:application/pdf;base64,${normalized}`;
+              } else {
+                // Not base64: avoid creating malformed data URIs (hex-escaped payloads should have been handled earlier)
+                fileUrl = undefined;
+              }
+            }
+
+            return { _id: id, title, fileUrl } as Poem;
+          });
 
         setPoems([...transformedPoems, ...poemPdfs]);
       } else {
@@ -86,6 +120,16 @@ const PoetryLanding: React.FC = () => {
   useEffect(() => {
     fetchPoemsAndPdfs();
   }, [fetchPoemsAndPdfs]);
+
+  // Cleanup any object URLs we created
+  useEffect(() => {
+    return () => {
+      createdUrlsRef.current.forEach(url => {
+        try { window.URL.revokeObjectURL(url); } catch { /* ignore */ }
+      });
+      createdUrlsRef.current = [];
+    };
+  }, []);
 
   return (
     <div className="poetry-landing">

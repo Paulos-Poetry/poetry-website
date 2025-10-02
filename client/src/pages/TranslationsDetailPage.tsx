@@ -4,6 +4,7 @@ import axios from "axios";
 import "../styles/TranslationsDetailPage.scss";
 import { useBackend } from "../contexts/BackendContext";
 import { SupabaseService } from "../services/apiService";
+import { toPdfBlobFromPayload } from "../services/pdfUtils";
 
 const URL = import.meta.env.VITE_ADDRESS;
 
@@ -30,19 +31,20 @@ const TranslationsDetailPage: React.FC = () => {
           setPdfTitle(translation.title);
           
           if (translation.pdf_data) {
-            // Convert base64 to blob for PDF viewing
-            try {
-              // Ensure we have a string (API service should convert binary to base64)
-              const pdfDataString = typeof translation.pdf_data === 'string' 
-                ? translation.pdf_data 
-                : String(translation.pdf_data);
-                
-              const binaryString = atob(pdfDataString);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+              // If the database already contains a URL just use it
+              if (typeof translation.pdf_data === 'string' && (translation.pdf_data.startsWith('http://') || translation.pdf_data.startsWith('https://') || translation.pdf_data.startsWith('/'))) {
+                setPdfUrl(translation.pdf_data);
+                setError(null);
+                return;
               }
-              const blob = new Blob([bytes], { type: "application/pdf" });
+
+              // Otherwise try to turn whatever we have into a Blob the browser can render
+            try {
+              const blob = toPdfBlobFromPayload(translation.pdf_data, translation.content_type || 'application/pdf');
+              if (!blob) {
+                setError('Error loading PDF: Unrecognized PDF format');
+                return;
+              }
               blobUrl = window.URL.createObjectURL(blob);
               setPdfUrl(blobUrl);
             } catch (error) {
