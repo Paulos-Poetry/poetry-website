@@ -2,3 +2,15 @@
 /client/node_modules
 /server/node_modules
 .idea
+
+# Migration scripts local envs
+supabase-migration/.env
+supabase-migration/.env.local
+
+# Local envs (global)
+.env
+.env.*
+
+# Local client debug artifacts
+client/debug-heroku.pdf
+client/debug-*.cjs
