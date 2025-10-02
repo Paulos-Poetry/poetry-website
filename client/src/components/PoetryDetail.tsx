@@ -1,23 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/PoetryDetail.scss';
-const URL = import.meta.env.VITE_ADDRESS;
-
-interface Poem {
-    _id: string;
-    title: string;
-    contentEnglish: string;
-    contentGreek: string;
-}
+import { useBackend } from '../contexts/BackendContext';
+import { SupabaseService, HerokuService, Poem } from '../services/apiService';
 
 const PoetryDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const [poem, setPoem] = useState<Poem | null>(null);
     const [newComment, setNewComment] = useState('');  // New comment input
     const [username, setUsername] = useState('');  // User's name for comment
     const [error, setError] = useState<string | null>(null);
     const [language, setLanguage] = useState<'english' | 'greek'>('english'); // Language toggle
+    const { currentBackend } = useBackend();
 
     // Check if the user is logged in and if the user is an admin
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -27,29 +22,53 @@ const PoetryDetail: React.FC = () => {
     // Fetch the selected poem by ID
     useEffect(() => {
         const fetchPoem = async () => {
+            // Handle timing issue: use localStorage if context hasn't updated yet
+            const actualBackend = currentBackend === 'heroku' && id!.includes('-') 
+                ? (localStorage.getItem('preferred-backend') || 'heroku')
+                : currentBackend;
+            
             try {
-                const response = await axios.get(`${URL}/poetry/${id}`);
-                setPoem(response.data);
+                let response;
+                if (actualBackend === 'supabase') {
+                    response = await SupabaseService.getPoemById(id!);
+                } else {
+                    response = await HerokuService.getPoemById(id!);
+                }
+                setPoem(response);
             } catch (error) {
                 console.error('Error fetching poem:', error);
-                setError('Failed to fetch poem.');
+                
+                // Check if this might be a cross-backend navigation issue
+                const isUUID = id!.includes('-');
+                const isHerokuBackend = actualBackend === 'heroku';
+                const isSupabaseBackend = actualBackend === 'supabase';
+                
+                if ((isUUID && isHerokuBackend) || (!isUUID && isSupabaseBackend)) {
+                    setError('This poem ID is from a different backend. Please go back to the poetry listings and select the poem again.');
+                } else {
+                    setError('Failed to fetch poem. Please try again or go back to the poetry listings.');
+                }
             }
         };
-        fetchPoem();
-    }, [id]);
+        if (id) {
+            fetchPoem();
+        }
+    }, [id, currentBackend]);
 
     // Submit a new comment
     const handleSubmitComment = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await axios.post(`${URL}/poetry/${id}/comments`, {
-                text: newComment,
-                author: username
-            });
+            let newCommentData;
+            if (currentBackend === 'supabase') {
+                newCommentData = await SupabaseService.addComment(id!, username, newComment);
+            } else {
+                newCommentData = await HerokuService.addComment(id!, username, newComment);
+            }
+            
             // Add the new comment to the list of comments
             if (poem) {
-                // @ts-ignore
-                setPoem({ ...poem, comments: [...poem.comments, response.data.comment] });
+                setPoem({ ...poem, comments: [...(poem.comments || []), newCommentData] });
             }
             setNewComment('');  // Clear the comment input
         } catch (error) {
@@ -61,11 +80,15 @@ const PoetryDetail: React.FC = () => {
     // Handle comment deletion by admin
     const handleDeleteComment = async (commentId: string) => {
         try {
-            await axios.delete(`${URL}/poetry/${id}/comments/${commentId}`);
+            if (currentBackend === 'supabase') {
+                await SupabaseService.deleteComment(commentId);
+            } else {
+                await HerokuService.deleteComment(id!, commentId);
+            }
+            
             // Remove the deleted comment from the state
             if (poem) {
-                // @ts-ignore
-                setPoem({ ...poem, comments: poem.comments.filter(comment => comment._id !== commentId) });
+                setPoem({ ...poem, comments: (poem.comments || []).filter(comment => comment._id !== commentId) });
             }
         } catch (error) {
             console.error('Error deleting comment:', error);
@@ -74,7 +97,14 @@ const PoetryDetail: React.FC = () => {
     };
 
     if (error) {
-        return <p className="error-message">{error}</p>;
+        return (
+            <div className="error-message">
+                <p>{error}</p>
+                <button onClick={() => navigate('/poetry')} className="back-button">
+                    ← Back to Poetry Listings
+                </button>
+            </div>
+        );
     }
 
     if (!poem) {
@@ -97,20 +127,18 @@ const PoetryDetail: React.FC = () => {
             />
 
             <h3>Comments</h3>
-            {/*@ts-ignore*/}
             {poem.comments.length === 0 ? (
                 <p>No comments yet.</p>  // Show if there are no comments
             ) : (
                 <ul>
-                    {/*@ts-ignore*/}
                     {poem.comments.map((comment, index) => (
                         <li key={index}>
                             <strong>{comment.author}</strong> - {new Date(comment.createdAt).toLocaleString()}:
                             <p>{comment.text}</p>
 
                             {/* Show delete button if the user is an admin */}
-                            {isAdmin && (
-                                <button onClick={() => handleDeleteComment(comment._id)}>
+                            {isAdmin && comment._id && (
+                                <button onClick={() => handleDeleteComment(comment._id!)}>
                                     Delete
                                 </button>
                             )}
