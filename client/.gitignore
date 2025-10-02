@@ -12,6 +12,28 @@ dist
 dist-ssr
 *.local
 
+# Environment files (local secrets)
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Build / cache
+.vite
+.cache
+.parcel-cache
+build
+out
+coverage
+.nyc_output
+
+# TypeScript build info
+tsconfig*.tsbuildinfo
+
+# Tool caches / lock files
+.eslintcache
+
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
