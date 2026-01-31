@@ -17,6 +17,7 @@ import TranslationsLanding from "./pages/TranslationsLanding.tsx";
 import TranslationsDetailPage from "./pages/TranslationsDetailPage.tsx";
 import PoemDashboard from "./pages/PoemDashboard";
 import TranslationDashboard from "./pages/TranslationDashboard";
+import { BackendProvider } from "./contexts/BackendContext";
 
 // Function to check if the user is an admin
 const isAdmin = () => {
@@ -30,47 +31,49 @@ const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <div className="app">
-        {/* Include the Navbar on all pages */}
-        <Navbar />
-        <Routes>
-          <Route path={"/"} element={<Home />} />
-          <Route path={"/poetry"} element={<PoetryLanding />} />
-          <Route path={"/poetry/:id"} element={<PoemDetail />} />
-          <Route path={"/login"} element={<LoginSignup />} />
-          <Route path={"/translations"} element={<TranslationsLanding />} />
-          <Route
-            path={"/translations/:id"}
-            element={<TranslationsDetailPage />}
-          />
-          <Route
-            path={"/admin"}
-            element={
-              <ProtectedAdminRoute>
-                <AdminDashboard />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path={"/admin/poems"}
-            element={
-              <ProtectedAdminRoute>
-                <PoemDashboard />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path={"/admin/translations"}
-            element={
-              <ProtectedAdminRoute>
-                <TranslationDashboard />
-              </ProtectedAdminRoute>
-            }
-          />
-        </Routes>
-      </div>
-    </Router>
+    <BackendProvider>
+      <Router>
+        <div className="app">
+          {/* Include the Navbar on all pages */}
+          <Navbar />
+          <Routes>
+            <Route path={"/"} element={<Home />} />
+            <Route path={"/poetry"} element={<PoetryLanding />} />
+            <Route path={"/poetry/:id"} element={<PoemDetail />} />
+            <Route path={"/login"} element={<LoginSignup />} />
+            <Route path={"/translations"} element={<TranslationsLanding />} />
+            <Route
+              path={"/translations/:id"}
+              element={<TranslationsDetailPage />}
+            />
+            <Route
+              path={"/admin"}
+              element={
+                <ProtectedAdminRoute>
+                  <AdminDashboard />
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route
+              path={"/admin/poems"}
+              element={
+                <ProtectedAdminRoute>
+                  <PoemDashboard />
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route
+              path={"/admin/translations"}
+              element={
+                <ProtectedAdminRoute>
+                  <TranslationDashboard />
+                </ProtectedAdminRoute>
+              }
+            />
+          </Routes>
+        </div>
+      </Router>
+    </BackendProvider>
   );
 };
 

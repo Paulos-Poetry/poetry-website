@@ -1,19 +1,16 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import "../styles/TranslationDashboard.scss";
-const URL = import.meta.env.VITE_ADDRESS;
+import { useBackend } from "../contexts/BackendContext";
+import { SupabaseService, HerokuService } from "../services/apiService";
+import BackendSwitcher from "../components/BackendSwitcher";
 
 interface Translation {
   _id: string;
   title: string;
-  contentType: string;
+  contentType?: string;
   date?: string;
 }
-
-const axiosInstance = axios.create({
-  baseURL: URL,
-});
 
 const TranslationDashboard: React.FC = () => {
   const location = useLocation();
@@ -24,10 +21,9 @@ const TranslationDashboard: React.FC = () => {
   const [date, setDate] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [editMode, setEditMode] = useState(false);
-  //@ts-ignore
   const [loading, setLoading] = useState(true);
-  //@ts-ignore
   const [error, setError] = useState<string | null>(null);
+  const { currentBackend } = useBackend();
 
   useEffect(() => {
     if (location.state && location.state.prefillTitle) {
@@ -35,20 +31,33 @@ const TranslationDashboard: React.FC = () => {
     }
   }, [location.state]);
 
-  useEffect(() => {
-    const fetchTranslations = async () => {
-      try {
-        const response = await axiosInstance.get("/translations/all");
-        setTranslations(response.data);
-      } catch (error) {
-        console.error("Error fetching translations:", error);
-        setError("Failed to fetch translations.");
-      } finally {
-        setLoading(false);
+  const fetchTranslations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let data;
+      if (currentBackend === 'supabase') {
+        data = await SupabaseService.getAllTranslations();
+      } else {
+        data = await HerokuService.getAllTranslations();
       }
-    };
+      setTranslations(data.map(t => ({
+        _id: t._id || '',
+        title: t.title,
+        contentType: t.contentType || t.content_type,
+        date: t.createdAt ? String(t.createdAt) : undefined
+      })));
+    } catch (error) {
+      console.error(`Error fetching translations from ${currentBackend}:`, error);
+      setError(`Failed to fetch translations from ${currentBackend}.`);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentBackend]);
+
+  useEffect(() => {
     fetchTranslations();
-  }, []);
+  }, [fetchTranslations]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -69,10 +78,11 @@ const TranslationDashboard: React.FC = () => {
 
     try {
       if (editMode && selectedTranslation) {
-        await axiosInstance.put(
-          `/translations/update/${selectedTranslation._id}`,
-          formData
-        );
+        if (currentBackend === 'supabase') {
+          await SupabaseService.updateTranslation(selectedTranslation._id, formData);
+        } else {
+          await HerokuService.updateTranslation(selectedTranslation._id, formData);
+        }
         setTranslations(
           translations.map((trans) =>
             trans._id === selectedTranslation._id
@@ -81,11 +91,13 @@ const TranslationDashboard: React.FC = () => {
           )
         );
       } else {
-        const response = await axiosInstance.post(
-          "/translations/upload",
-          formData
-        );
-        setTranslations([...translations, response.data]);
+        let response;
+        if (currentBackend === 'supabase') {
+          response = await SupabaseService.createTranslation(formData);
+        } else {
+          response = await HerokuService.createTranslation(formData);
+        }
+        setTranslations([...translations, { _id: response._id || '', title: response.title, date: response.createdAt ? String(response.createdAt) : undefined }]);
       }
       resetForm();
     } catch (error) {
@@ -115,9 +127,11 @@ const TranslationDashboard: React.FC = () => {
   const handleDeleteTranslation = async () => {
     if (selectedTranslation) {
       try {
-        await axiosInstance.delete(
-          `/translations/delete/${selectedTranslation._id}`
-        );
+        if (currentBackend === 'supabase') {
+          await SupabaseService.deleteTranslation(selectedTranslation._id);
+        } else {
+          await HerokuService.deleteTranslation(selectedTranslation._id);
+        }
         setTranslations(
           translations.filter((trans) => trans._id !== selectedTranslation._id)
         );
@@ -131,7 +145,11 @@ const TranslationDashboard: React.FC = () => {
 
   return (
     <div className="translations-dashboard">
+      <BackendSwitcher />
       <h2>{editMode ? "Edit Translation" : "Add New Translation"}</h2>
+      
+      {error && <p className="error-message">{error}</p>}
+      {loading && <p className="loading-message">Loading translations...</p>}
 
       <form onSubmit={handleSubmitTranslation}>
         <input

@@ -19,6 +19,8 @@ const Navbar: React.FC = () => {
     sessionStorage.removeItem("token");
     localStorage.removeItem("isAdmin");
     sessionStorage.removeItem("isAdmin");
+    localStorage.removeItem("userId");
+    sessionStorage.removeItem("userId");
     navigate("/login"); // Redirect to login page after logout
     setIsOpen(false); // Close the menu after logout
   };
