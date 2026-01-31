@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import '../styles/PoetryDetailPage.scss';
-import { useBackend } from '../contexts/BackendContext';
-import { SupabaseService, HerokuService, Poem } from '../services/apiService';
+import { SupabaseService, Poem } from '../services/apiService';
 
 const PoetryDetailPage: React.FC = () => {
     const { id } = useParams();
@@ -10,7 +9,6 @@ const PoetryDetailPage: React.FC = () => {
     const [language, setLanguage] = useState<'english' | 'greek'>('english');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const { currentBackend } = useBackend();
 
     useEffect(() => {
         const fetchPoem = async () => {
@@ -18,22 +16,17 @@ const PoetryDetailPage: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
-                let response;
-                if (currentBackend === 'supabase') {
-                    response = await SupabaseService.getPoemById(id);
-                } else {
-                    response = await HerokuService.getPoemById(id);
-                }
+                const response = await SupabaseService.getPoemById(id);
                 setPoem(response);
             } catch (error) {
-                console.error(`Error fetching poem from ${currentBackend}:`, error);
-                setError(`Failed to fetch poem from ${currentBackend}.`);
+                console.error('Error fetching poem from Supabase:', error);
+                setError('Failed to fetch poem.');
             } finally {
                 setLoading(false);
             }
         };
         fetchPoem();
-    }, [id, currentBackend]);
+    }, [id]);
 
     if (loading) {
         return (

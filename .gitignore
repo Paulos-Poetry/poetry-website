@@ -24,12 +24,10 @@ node_modules/
 client/debug-heroku.pdf
 client/debug-*.cjs
 
-# Package lock files (can be included or ignored based on preference)
-# Uncomment to ignore:
-# Root package files (workspace is in client/server subdirectories)
-/package.json
-outputs
-/client/dist
+# Package lock files
+/package-lock.json
+
+# Build outputs
 /server/dist
 /client/build
 /server/build
