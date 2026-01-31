@@ -6,6 +6,7 @@ import cors from "cors";
 import userRoutes from "./routes/user"; // Import user routes
 import poetryRoutes from "./routes/poetry"; // Import user routes
 import translationRoutes from "./routes/translation"; // Import user routes
+import supabaseAuthRoutes from "./routes/supabaseAuth"; // Supabase-backed auth routes (store users in poetry_users)
 
 dotenv.config(); // Load environment variables
 
@@ -17,6 +18,7 @@ app.use(cors());
 app.use(userRoutes);
 app.use(poetryRoutes);
 app.use(translationRoutes);
+app.use(supabaseAuthRoutes);
 
 // Connect to MongoDB
 mongoose

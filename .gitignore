@@ -1,16 +1,49 @@
+# Environment files (secrets, keys, etc.)
 /server/.env
-/client/node_modules
-/server/node_modules
-.idea
+/client/.env
+/client/.env.local
+/client/.env.*.local
+.env
+.env.*
+.env.local
+.env.*.local
 
 # Migration scripts local envs
 supabase-migration/.env
 supabase-migration/.env.local
 
-# Local envs (global)
-.env
-.env.*
+# Node modules
+node_modules/
+/client/node_modules
+/server/node_modules
+/supabase-migration/node_modules
+
+# IDE
+.idea
+.vscode/
 
 # Local client debug artifacts
 client/debug-heroku.pdf
 client/debug-*.cjs
+
+# Package lock files (can be included or ignored based on preference)
+# Uncomment to ignore:
+# package-lock.json
+# client/package-lock.json
+# server/package-lock.json
+
+# Build outputs
+/client/dist
+/server/dist
+/client/build
+/server/build
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

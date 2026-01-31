@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "../styles/LoginSignup.scss";
+import { useBackend } from "../contexts/BackendContext";
+import { SupabaseService } from "../services/apiService";
+
 const URL = import.meta.env.VITE_ADDRESS;
 
 // Create Axios instance with baseURL
@@ -11,6 +14,7 @@ const axiosInstance = axios.create({
 
 
 const LoginSignup: React.FC = () => {
+  const { currentBackend } = useBackend();
   const [isLogin, setIsLogin] = useState(true); // Toggle between Login and Signup
   const [formData, setFormData] = useState({
     username: "",
@@ -41,30 +45,49 @@ const LoginSignup: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let response;
-      if (isLogin) {
-        // Login request
-        response = await axiosInstance.post("/login", {
-          username: formData.username,
-          password: formData.password,
-        });
-        console.log("Login Success:", response.data);
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("isAdmin", response.data.isAdmin);
-
-        navigate("/"); // Redirect to main page after successful login
+      if (currentBackend === 'supabase') {
+        if (isLogin) {
+          // Direct Supabase authentication using poetry_users table
+          const user = await SupabaseService.signIn(formData.email, formData.password);
+          // Generate a simple token (in production, use proper JWT)
+          const token = btoa(JSON.stringify({ id: user.id, email: user.email, timestamp: Date.now() }));
+          localStorage.setItem('token', token);
+          localStorage.setItem('isAdmin', String(user.is_admin || false));
+          localStorage.setItem('userId', user.id);
+          navigate('/');
+        } else {
+          // Signup using Supabase
+          await SupabaseService.signUp(formData.username, formData.email, formData.password);
+          setIsLogin(true);
+          setErrorMessage("Account created successfully! Please log in.");
+        }
       } else {
-        // Signup request
-        response = await axiosInstance.post("/signup", formData);
-        console.log("Signup Success:", response.data);
-        setIsLogin(true); // Switch to login form after signup
+        // fallback to existing heroku API
+        if (isLogin) {
+          // Login request - try email first, then username
+          const loginData = formData.email 
+            ? { email: formData.email, password: formData.password }
+            : { username: formData.username, password: formData.password };
+          
+          const resp = await axiosInstance.post<{ token: string; isAdmin: boolean }>("/login", loginData);
+          console.log("Login Success:", resp.data);
+          localStorage.setItem("token", resp.data.token);
+          localStorage.setItem("isAdmin", String(resp.data.isAdmin));
+
+          navigate("/"); // Redirect to main page after successful login
+        } else {
+          // Signup request
+          const resp = await axiosInstance.post("/signup", formData);
+          console.log("Signup Success:", resp.data);
+          setIsLogin(true); // Switch to login form after signup
+        }
       }
 
       setErrorMessage(""); // Clear error message on success
-    } catch (error: any) {
-      const errorMsg =
-        error.response?.data?.msg ||
-        "Authentication failed. Please check your credentials.";
+    } catch (error) {
+      // Narrow the error to expected axios-like shape or fallback
+      const err = error as unknown as { response?: { data?: { msg?: string } }; message?: string };
+      const errorMsg = err?.response?.data?.msg || err?.message || "Authentication failed. Please check your credentials.";
       setErrorMessage(errorMsg);
     }
   };
@@ -79,9 +102,11 @@ const LoginSignup: React.FC = () => {
     <div className="login-signup">
       <div className="form-container">
         <h2>{isLogin ? "Login" : "Sign Up"}</h2>
+        <p className="backend-indicator">Using: {currentBackend}</p>
         {errorMessage && <p className="error-message">{errorMessage}</p>}
         <form onSubmit={handleSubmit}>
-          {!isLogin && (
+          {/* Show email for signup, or for Supabase login */}
+          {(!isLogin || currentBackend === 'supabase') && (
             <input
               type="email"
               name="email"
@@ -91,14 +116,17 @@ const LoginSignup: React.FC = () => {
               required
             />
           )}
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleInputChange}
-            required
-          />
+          {/* Show username for signup, or for Heroku login */}
+          {(!isLogin || currentBackend === 'heroku') && (
+            <input
+              type="text"
+              name="username"
+              placeholder="Username"
+              value={formData.username}
+              onChange={handleInputChange}
+              required={!isLogin || currentBackend === 'heroku'}
+            />
+          )}
           <input
             type="password"
             name="password"

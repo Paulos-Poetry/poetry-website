@@ -11,12 +11,6 @@ const BackendSwitcher: React.FC = () => {
         <span className="switcher-label">Backend:</span>
         <div className="switcher-buttons">
           <button
-            className={`switcher-btn ${currentBackend === 'heroku' ? 'active' : ''}`}
-            onClick={() => setBackend('heroku')}
-          >
-            Heroku (Current)
-          </button>
-          <button
             className={`switcher-btn ${currentBackend === 'supabase' ? 'active' : ''} ${
               !isSupabaseReady ? 'disabled' : ''
             }`}
@@ -24,17 +18,23 @@ const BackendSwitcher: React.FC = () => {
             disabled={!isSupabaseReady}
             title={!isSupabaseReady ? 'Supabase not configured yet' : 'Switch to Supabase'}
           >
-            Supabase (New)
+            Supabase (Primary)
+          </button>
+          <button
+            className={`switcher-btn ${currentBackend === 'heroku' ? 'active' : ''}`}
+            onClick={() => setBackend('heroku')}
+          >
+            Heroku (Legacy)
           </button>
         </div>
       </div>
       <div className="switcher-status">
         <span className={`status-indicator ${currentBackend}`}>
-          {currentBackend === 'heroku' ? '🟢' : '🟡'} Using {currentBackend.charAt(0).toUpperCase() + currentBackend.slice(1)}
+          {currentBackend === 'supabase' ? '🟢' : '🟡'} Using {currentBackend.charAt(0).toUpperCase() + currentBackend.slice(1)}
         </span>
-        {!isSupabaseReady && (
+        {!isSupabaseReady && currentBackend === 'supabase' && (
           <span className="setup-hint">
-            💡 Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable Supabase
+            ⚠️ Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file
           </span>
         )}
       </div>

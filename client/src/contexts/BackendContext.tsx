@@ -24,7 +24,8 @@ interface BackendProviderProps {
 }
 
 export const BackendProvider: React.FC<BackendProviderProps> = ({ children }) => {
-  const [currentBackend, setCurrentBackend] = useState<BackendType>('heroku');
+  // Default to 'supabase' for full migration
+  const [currentBackend, setCurrentBackend] = useState<BackendType>('supabase');
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
 
   const setBackend = (backend: BackendType) => {

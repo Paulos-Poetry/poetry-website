@@ -1,44 +1,53 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import "../styles/AdminDashboard.scss";
-
-const URL = import.meta.env.VITE_ADDRESS;
+import { useBackend } from "../contexts/BackendContext";
+import { SupabaseService, HerokuService } from "../services/apiService";
+import BackendSwitcher from "../components/BackendSwitcher";
 
 interface User {
   _id: string;
   username: string;
+  email: string;
   isAdmin: boolean;
 }
-
-const axiosInstance = axios.create({
-  baseURL: URL,
-});
 
 const AdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { currentBackend } = useBackend();
 
   useEffect(() => {
     const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const userResponse = await axiosInstance.get("/users");
-        setUsers(userResponse.data);
+        let userData: User[];
+        if (currentBackend === 'supabase') {
+          userData = await SupabaseService.getAllUsers();
+        } else {
+          userData = await HerokuService.getAllUsers();
+        }
+        setUsers(userData);
       } catch (error) {
-        console.error("Error fetching users:", error);
-        setError("Failed to fetch users.");
+        console.error(`Error fetching users from ${currentBackend}:`, error);
+        setError(`Failed to fetch users from ${currentBackend}.`);
       } finally {
         setLoading(false);
       }
     };
     fetchUsers();
-  }, []);
+  }, [currentBackend]);
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
     try {
-      await axiosInstance.delete(`/user/${selectedUser._id}`);
+      if (currentBackend === 'supabase') {
+        await SupabaseService.deleteUser(selectedUser._id);
+      } else {
+        await HerokuService.deleteUser(selectedUser._id);
+      }
       setUsers(users.filter((user) => user._id !== selectedUser._id));
       setSelectedUser(null);
     } catch (error) {
@@ -50,7 +59,11 @@ const AdminDashboard: React.FC = () => {
   const handlePromoteUser = async () => {
     if (!selectedUser) return;
     try {
-      await axiosInstance.put(`/user/${selectedUser._id}/make-admin`);
+      if (currentBackend === 'supabase') {
+        await SupabaseService.makeUserAdmin(selectedUser._id);
+      } else {
+        await HerokuService.makeUserAdmin(selectedUser._id);
+      }
       setUsers(users.map((user) =>
         user._id === selectedUser._id ? { ...user, isAdmin: true } : user
       ));
@@ -64,7 +77,11 @@ const AdminDashboard: React.FC = () => {
   const handleRemoveAdmin = async () => {
     if (!selectedUser) return;
     try {
-      await axiosInstance.put(`/user/${selectedUser._id}/remove-admin`);
+      if (currentBackend === 'supabase') {
+        await SupabaseService.removeUserAdmin(selectedUser._id);
+      } else {
+        await HerokuService.removeUserAdmin(selectedUser._id);
+      }
       setUsers(users.map((user) =>
         user._id === selectedUser._id ? { ...user, isAdmin: false } : user
       ));
@@ -77,6 +94,7 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="admin-dashboard">
+      <BackendSwitcher />
       <h2>Admin Dashboard - Manage Users</h2>
 
       {error && <p className="error-message">{error}</p>}

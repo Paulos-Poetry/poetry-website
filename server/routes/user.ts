@@ -47,8 +47,8 @@ router.post('/signup', async (req, res) => {
         });
 
         res.status(201).json({ token, isAdmin: user.isAdmin });
-    } catch (error) {
-        console.error(error.message); // Log error for debugging
+    } catch (error: any) {
+        console.error(error?.message || error); // Log error for debugging
         res.status(500).send('Server error');
     }
 });
@@ -80,20 +80,19 @@ router.post('/login', async (req, res) => {
         });
 
         res.status(200).json({ token, isAdmin: user.isAdmin });
-    } catch (error) {
-        console.error(error.message);
+    } catch (error: any) {
+        console.error(error?.message || error);
         res.status(500).send('Server error');
     }
 });
 
-// Route to delete a user
+// Note: Administrative actions (promote/demote) are intentionally not exposed via HTTP
+// to ensure admin status can only be changed manually in the backend/database.
+// If you need a protected admin API in future, implement server-side-only endpoints
+// that require strong authentication and authorization.
+
+// Route to delete a user (kept for backend maintenance; ideally protected)
 router.delete('/user/:userId', deleteUser);
-
-// Route to make a user an admin
-router.put('/user/:userId/make-admin', makeUserAdmin);
-
-// Remove admin status from a user
-router.put('/user/:userId/remove-admin', removeUserAdmin);
 
 // Route to get all users
 router.get('/users', getUsers);  // Fetch all users
