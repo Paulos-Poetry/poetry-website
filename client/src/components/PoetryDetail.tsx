@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/PoetryDetail.scss';
-import { useBackend } from '../contexts/BackendContext';
-import { SupabaseService, HerokuService, Poem } from '../services/apiService';
+import { SupabaseService, Poem } from '../services/apiService';
 
 const PoetryDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -12,7 +11,6 @@ const PoetryDetail: React.FC = () => {
     const [username, setUsername] = useState('');  // User's name for comment
     const [error, setError] = useState<string | null>(null);
     const [language, setLanguage] = useState<'english' | 'greek'>('english'); // Language toggle
-    const { currentBackend } = useBackend();
 
     // Check if the user is logged in and if the user is an admin
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -22,49 +20,24 @@ const PoetryDetail: React.FC = () => {
     // Fetch the selected poem by ID
     useEffect(() => {
         const fetchPoem = async () => {
-            // Handle timing issue: use localStorage if context hasn't updated yet
-            const actualBackend = currentBackend === 'heroku' && id!.includes('-') 
-                ? (localStorage.getItem('preferred-backend') || 'heroku')
-                : currentBackend;
-            
             try {
-                let response;
-                if (actualBackend === 'supabase') {
-                    response = await SupabaseService.getPoemById(id!);
-                } else {
-                    response = await HerokuService.getPoemById(id!);
-                }
+                const response = await SupabaseService.getPoemById(id!);
                 setPoem(response);
             } catch (error) {
                 console.error('Error fetching poem:', error);
-                
-                // Check if this might be a cross-backend navigation issue
-                const isUUID = id!.includes('-');
-                const isHerokuBackend = actualBackend === 'heroku';
-                const isSupabaseBackend = actualBackend === 'supabase';
-                
-                if ((isUUID && isHerokuBackend) || (!isUUID && isSupabaseBackend)) {
-                    setError('This poem ID is from a different backend. Please go back to the poetry listings and select the poem again.');
-                } else {
-                    setError('Failed to fetch poem. Please try again or go back to the poetry listings.');
-                }
+                setError('Failed to fetch poem. Please try again or go back to the poetry listings.');
             }
         };
         if (id) {
             fetchPoem();
         }
-    }, [id, currentBackend]);
+    }, [id]);
 
     // Submit a new comment
     const handleSubmitComment = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            let newCommentData;
-            if (currentBackend === 'supabase') {
-                newCommentData = await SupabaseService.addComment(id!, username, newComment);
-            } else {
-                newCommentData = await HerokuService.addComment(id!, username, newComment);
-            }
+            const newCommentData = await SupabaseService.addComment(id!, username, newComment);
             
             // Add the new comment to the list of comments
             if (poem) {
@@ -80,11 +53,7 @@ const PoetryDetail: React.FC = () => {
     // Handle comment deletion by admin
     const handleDeleteComment = async (commentId: string) => {
         try {
-            if (currentBackend === 'supabase') {
-                await SupabaseService.deleteComment(commentId);
-            } else {
-                await HerokuService.deleteComment(id!, commentId);
-            }
+            await SupabaseService.deleteComment(commentId);
             
             // Remove the deleted comment from the state
             if (poem) {

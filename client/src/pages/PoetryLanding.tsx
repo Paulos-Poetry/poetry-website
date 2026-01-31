@@ -1,14 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import "../styles/PoetryLanding.scss";
-import { BASE_URL } from "../constants";
-import BackendSwitcher from "../components/BackendSwitcher";
-import { useBackend } from "../contexts/BackendContext";
 import { SupabaseService } from "../services/apiService";
 import { toPdfBlobFromPayload } from "../services/pdfUtils";
-
-const URL = import.meta.env.VITE_ADDRESS;
 
 interface Poem {
   _id: string;
@@ -23,7 +17,6 @@ const PoetryLanding: React.FC = () => {
   const [poems, setPoems] = useState<Poem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { currentBackend } = useBackend();
 
   const createdUrlsRef = useRef<string[]>([]);
 
@@ -33,10 +26,9 @@ const PoetryLanding: React.FC = () => {
     setError(null);
     
     try {
-      if (currentBackend === 'supabase') {
-        // Fetch from Supabase
-        const supabasePoems = await SupabaseService.getAllPoems();
-        const supabaseTranslations = await SupabaseService.getAllTranslations();
+      // Fetch from Supabase
+      const supabasePoems = await SupabaseService.getAllPoems();
+      const supabaseTranslations = await SupabaseService.getAllTranslations();
         
         // Transform poems
         const transformedPoems = supabasePoems.map(poem => ({
@@ -87,35 +79,15 @@ const PoetryLanding: React.FC = () => {
           });
 
         setPoems([...transformedPoems, ...poemPdfs]);
-      } else {
-        // Original Heroku logic
-        const poemResponse = await axios.get(`${URL}/poetry`);
-        const poems = poemResponse.data;
-
-        const pdfResponse = await axios.get(`${URL}/translations/all`);
-        const pdfs = pdfResponse.data;
-
-        // Filter PDFs with "POEM" in the title:
-        const poemPdfs = pdfs
-          .filter((pdf: { title?: string }) => pdf.title && pdf.title.startsWith("POEM"))
-          .map((pdf: { _id: string; title: string }) => ({
-            _id: pdf._id,
-            title: pdf.title.replace(/\bPOEM\b\s?/g, ''), // Remove "POEM" from the title
-            fileUrl: `${URL}/translations/stream/${pdf._id}`, // Build file URL
-          }));
-
-        // Combine poems and filtered PDFs:
-        setPoems([...poems, ...poemPdfs]);
-      }
       
-      console.log(`Fetched poems from ${currentBackend}`);
+      console.log('Fetched poems from Supabase');
     } catch (error) {
-      console.error(`Error fetching poems from ${currentBackend}:`, error);
-      setError(`Failed to fetch poems from ${currentBackend}.`);
+      console.error('Error fetching poems from Supabase:', error);
+      setError('Failed to fetch poems.');
     } finally {
       setLoading(false);
     }
-  }, [currentBackend]);
+  }, []);
 
   useEffect(() => {
     fetchPoemsAndPdfs();
@@ -133,8 +105,6 @@ const PoetryLanding: React.FC = () => {
 
   return (
     <div className="poetry-landing">
-      <BackendSwitcher />
-      
       <h2>Poetry Landing</h2>
       {error && <p className="error-message">{error}</p>}
       {loading && <p className="loading-message">Loading poems...</p>}
@@ -156,7 +126,7 @@ const PoetryLanding: React.FC = () => {
             ) : (
               // For regular poems
               <Link
-                to={`${BASE_URL}/poetry/${poem._id}`}
+                to={`/poetry/${poem._id}`}
                 className="poetry-card-link"
               >
                 <h1 className="poem-title">{poem.title}</h1>

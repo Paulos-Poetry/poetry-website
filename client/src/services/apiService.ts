@@ -1,7 +1,5 @@
 import bcrypt from 'bcryptjs';
-// Type for axios error response structure
 import { createClient } from '@supabase/supabase-js';
-import axios from 'axios';
 
 // Supabase client setup
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -472,106 +470,5 @@ export class SupabaseService {
     if (updateError) throw updateError;
 
     return newLikes;
-  }
-}
-
-// Heroku API service (your existing API calls)
-export class HerokuService {
-  private static getBaseUrl(): string {
-    return import.meta.env.VITE_ADDRESS || 'https://paulospoetry.com';
-  }
-
-  static async getAllTranslations(): Promise<Translation[]> {
-    const response = await axios.get(`${this.getBaseUrl()}/translations/all`);
-    return response.data as Translation[];
-  }
-
-  static async getTranslationById(id: string) {
-    // Your existing PDF streaming logic
-    const response = await axios.get(`${this.getBaseUrl()}/translations/stream/${id}`, {
-      responseType: 'blob',
-    });
-    return response;
-  }
-
-  static async getTranslationInfo(id: string): Promise<Translation> {
-    const response = await axios.get(`${this.getBaseUrl()}/translations/info/${id}`);
-    return response.data as Translation;
-  }
-
-  static async getAllPoems(): Promise<Poem[]> {
-    const response = await axios.get(`${this.getBaseUrl()}/poetry`);
-    return response.data as Poem[];
-  }
-
-  static async getPoemById(id: string): Promise<Poem> {
-    const response = await axios.get(`${this.getBaseUrl()}/poetry/${id}`);
-    return response.data as Poem;
-  }
-
-  static async addComment(poemId: string, author: string, text: string): Promise<Comment> {
-    const response = await axios.post(`${this.getBaseUrl()}/poetry/${poemId}/comments`, {
-      author,
-      text
-    });
-    return response.data as Comment;
-  }
-
-  static async deleteComment(poemId: string, commentId: string): Promise<void> {
-    await axios.delete(`${this.getBaseUrl()}/poetry/${poemId}/comments/${commentId}`);
-  }
-
-  // Poem CRUD operations
-  static async createPoem(poem: { title: string; contentEnglish: string; contentGreek: string }): Promise<Poem> {
-    const response = await axios.post(`${this.getBaseUrl()}/poetry`, poem);
-    return response.data as Poem;
-  }
-
-  static async updatePoem(id: string, poem: { title: string; contentEnglish: string; contentGreek: string }): Promise<Poem> {
-    const response = await axios.put(`${this.getBaseUrl()}/poetry/${id}`, poem);
-    return response.data as Poem;
-  }
-
-  static async deletePoem(id: string): Promise<void> {
-    await axios.delete(`${this.getBaseUrl()}/poetry/${id}`);
-  }
-
-  // Translation CRUD operations
-  static async createTranslation(formData: FormData): Promise<Translation> {
-    const response = await axios.post(`${this.getBaseUrl()}/translations/upload`, formData);
-    return response.data as Translation;
-  }
-
-  static async updateTranslation(id: string, formData: FormData): Promise<Translation> {
-    const response = await axios.put(`${this.getBaseUrl()}/translations/update/${id}`, formData);
-    return response.data as Translation;
-  }
-
-  static async deleteTranslation(id: string): Promise<void> {
-    await axios.delete(`${this.getBaseUrl()}/translations/delete/${id}`);
-  }
-
-  // User management operations
-  static async getAllUsers(): Promise<Array<{ _id: string; username: string; email: string; isAdmin: boolean }>> {
-    const response = await axios.get<Array<{ _id: string; username: string; email: string; isAdmin: boolean }>>(`${this.getBaseUrl()}/users`);
-    return response.data;
-  }
-
-  static async deleteUser(id: string): Promise<void> {
-    await axios.delete(`${this.getBaseUrl()}/user/${id}`);
-  }
-
-  static async makeUserAdmin(id: string): Promise<void> {
-    await axios.put(`${this.getBaseUrl()}/user/${id}/make-admin`);
-  }
-
-  static async removeUserAdmin(id: string): Promise<void> {
-    await axios.put(`${this.getBaseUrl()}/user/${id}/remove-admin`);
-  }
-
-  // Like poem
-  static async likePoem(id: string): Promise<number> {
-    const response = await axios.post<{ likes: number }>(`${this.getBaseUrl()}/poetry/${id}/like`);
-    return response.data.likes;
   }
 }

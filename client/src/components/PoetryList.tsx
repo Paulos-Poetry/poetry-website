@@ -14,7 +14,7 @@ const PoetryList: React.FC = () => {
 
   useEffect(() => {
     const fetchPoems = async () => {
-      const response = await axios.get("/poetry");
+      const response = await axios.get<Poem[]>("/poetry");
       setPoems(response.data);
     };
     fetchPoems();

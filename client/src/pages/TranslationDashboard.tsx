@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import "../styles/TranslationDashboard.scss";
-import { useBackend } from "../contexts/BackendContext";
-import { SupabaseService, HerokuService } from "../services/apiService";
-import BackendSwitcher from "../components/BackendSwitcher";
+import { SupabaseService } from "../services/apiService";
 
 interface Translation {
   _id: string;
@@ -23,7 +21,6 @@ const TranslationDashboard: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { currentBackend } = useBackend();
 
   useEffect(() => {
     if (location.state && location.state.prefillTitle) {
@@ -35,12 +32,7 @@ const TranslationDashboard: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      let data;
-      if (currentBackend === 'supabase') {
-        data = await SupabaseService.getAllTranslations();
-      } else {
-        data = await HerokuService.getAllTranslations();
-      }
+      const data = await SupabaseService.getAllTranslations();
       setTranslations(data.map(t => ({
         _id: t._id || '',
         title: t.title,
@@ -48,12 +40,12 @@ const TranslationDashboard: React.FC = () => {
         date: t.createdAt ? String(t.createdAt) : undefined
       })));
     } catch (error) {
-      console.error(`Error fetching translations from ${currentBackend}:`, error);
-      setError(`Failed to fetch translations from ${currentBackend}.`);
+      console.error('Error fetching translations from Supabase:', error);
+      setError('Failed to fetch translations.');
     } finally {
       setLoading(false);
     }
-  }, [currentBackend]);
+  }, []);
 
   useEffect(() => {
     fetchTranslations();
@@ -78,11 +70,7 @@ const TranslationDashboard: React.FC = () => {
 
     try {
       if (editMode && selectedTranslation) {
-        if (currentBackend === 'supabase') {
-          await SupabaseService.updateTranslation(selectedTranslation._id, formData);
-        } else {
-          await HerokuService.updateTranslation(selectedTranslation._id, formData);
-        }
+        await SupabaseService.updateTranslation(selectedTranslation._id, formData);
         setTranslations(
           translations.map((trans) =>
             trans._id === selectedTranslation._id
@@ -91,12 +79,7 @@ const TranslationDashboard: React.FC = () => {
           )
         );
       } else {
-        let response;
-        if (currentBackend === 'supabase') {
-          response = await SupabaseService.createTranslation(formData);
-        } else {
-          response = await HerokuService.createTranslation(formData);
-        }
+        const response = await SupabaseService.createTranslation(formData);
         setTranslations([...translations, { _id: response._id || '', title: response.title, date: response.createdAt ? String(response.createdAt) : undefined }]);
       }
       resetForm();
@@ -127,11 +110,7 @@ const TranslationDashboard: React.FC = () => {
   const handleDeleteTranslation = async () => {
     if (selectedTranslation) {
       try {
-        if (currentBackend === 'supabase') {
-          await SupabaseService.deleteTranslation(selectedTranslation._id);
-        } else {
-          await HerokuService.deleteTranslation(selectedTranslation._id);
-        }
+        await SupabaseService.deleteTranslation(selectedTranslation._id);
         setTranslations(
           translations.filter((trans) => trans._id !== selectedTranslation._id)
         );
@@ -145,7 +124,6 @@ const TranslationDashboard: React.FC = () => {
 
   return (
     <div className="translations-dashboard">
-      <BackendSwitcher />
       <h2>{editMode ? "Edit Translation" : "Add New Translation"}</h2>
       
       {error && <p className="error-message">{error}</p>}

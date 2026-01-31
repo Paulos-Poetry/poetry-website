@@ -41,12 +41,12 @@ const DataInspector: React.FC<DataInspectorProps> = ({ apiUrl, backendType }) =>
       } else {
         // Use Axios for Heroku backend
         console.log('📝 Fetching Heroku Poetry Data...');
-        const poetryResponse = await axios.get(`${apiUrl}/poetry`);
+        const poetryResponse = await axios.get<Poem[]>(`${apiUrl}/poetry`);
         console.log(`📝 ${backendType} Poetry Data:`, poetryResponse.data);
         setPoetyData(poetryResponse.data);
 
         console.log('📚 Fetching Heroku Translations Data...');
-        const translationsResponse = await axios.get(`${apiUrl}/translations/all`);
+        const translationsResponse = await axios.get<Translation[]>(`${apiUrl}/translations/all`);
         console.log(`📚 ${backendType} Translations Data:`, translationsResponse.data);
         setTranslationData(translationsResponse.data);
 

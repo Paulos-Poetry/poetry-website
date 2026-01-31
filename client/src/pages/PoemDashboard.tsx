@@ -2,9 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import "../styles/AdminDashboard.scss";
-import { useBackend } from "../contexts/BackendContext";
-import { SupabaseService, HerokuService } from "../services/apiService";
-import BackendSwitcher from "../components/BackendSwitcher";
+import { SupabaseService } from "../services/apiService";
 
 interface Poem {
   _id: string;
@@ -27,16 +25,10 @@ const PoemDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [poemPdfs, setPoemPdfs] = useState<Poem[]>([]);
-  const { currentBackend } = useBackend();
 
   const fetchPoemPdfs = useCallback(async () => {
     try {
-      let translations;
-      if (currentBackend === 'supabase') {
-        translations = await SupabaseService.getAllTranslations();
-      } else {
-        translations = await HerokuService.getAllTranslations();
-      }
+      const translations = await SupabaseService.getAllTranslations();
       const filtered = translations
         .filter((item) => item.title && item.title.startsWith("POEM"))
         .map((item) => ({
@@ -49,18 +41,13 @@ const PoemDashboard: React.FC = () => {
     } catch (err) {
       console.error("Error fetching poem PDFs:", err);
     }
-  }, [currentBackend]);
+  }, []);
 
   const fetchPoems = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      let poemData;
-      if (currentBackend === 'supabase') {
-        poemData = await SupabaseService.getAllPoems();
-      } else {
-        poemData = await HerokuService.getAllPoems();
-      }
+      const poemData = await SupabaseService.getAllPoems();
       setPoems(poemData.map(p => ({
         _id: p._id || '',
         title: p.title,
@@ -68,12 +55,12 @@ const PoemDashboard: React.FC = () => {
         contentGreek: p.contentGreek
       })));
     } catch (error) {
-      console.error(`Error fetching poems from ${currentBackend}:`, error);
-      setError(`Failed to fetch poems from ${currentBackend}.`);
+      console.error('Error fetching poems from Supabase:', error);
+      setError('Failed to fetch poems.');
     } finally {
       setLoading(false);
     }
-  }, [currentBackend]);
+  }, []);
 
   useEffect(() => {
     fetchPoemPdfs();
@@ -112,12 +99,7 @@ const PoemDashboard: React.FC = () => {
 
     if (editMode && selectedPoem) {
       try {
-        let response;
-        if (currentBackend === 'supabase') {
-          response = await SupabaseService.updatePoem(selectedPoem._id, updatedPoem);
-        } else {
-          response = await HerokuService.updatePoem(selectedPoem._id, updatedPoem);
-        }
+        const response = await SupabaseService.updatePoem(selectedPoem._id, updatedPoem);
         setPoems(
           poems.map((poem) =>
             poem._id === selectedPoem._id ? { ...response, _id: response._id || selectedPoem._id } : poem
@@ -130,12 +112,7 @@ const PoemDashboard: React.FC = () => {
       }
     } else {
       try {
-        let response;
-        if (currentBackend === 'supabase') {
-          response = await SupabaseService.createPoem(updatedPoem);
-        } else {
-          response = await HerokuService.createPoem(updatedPoem);
-        }
+        const response = await SupabaseService.createPoem(updatedPoem);
         setPoems([...poems, { ...response, _id: response._id || '' }]);
         resetForm();
       } catch (error) {
@@ -196,21 +173,13 @@ const PoemDashboard: React.FC = () => {
     try {
       if (selectedPoem.title.startsWith("POEM")) {
         // Delete from translations collection
-        if (currentBackend === 'supabase') {
-          await SupabaseService.deleteTranslation(selectedPoem._id);
-        } else {
-          await HerokuService.deleteTranslation(selectedPoem._id);
-        }
+        await SupabaseService.deleteTranslation(selectedPoem._id);
         setPoemPdfs((prev) =>
           prev.filter((poem) => poem._id !== selectedPoem._id)
         );
       } else {
         // Delete from poetry collection
-        if (currentBackend === 'supabase') {
-          await SupabaseService.deletePoem(selectedPoem._id);
-        } else {
-          await HerokuService.deletePoem(selectedPoem._id);
-        }
+        await SupabaseService.deletePoem(selectedPoem._id);
         setPoems((prev) =>
           prev.filter((poem) => poem._id !== selectedPoem._id)
         );
@@ -239,11 +208,7 @@ const PoemDashboard: React.FC = () => {
     formData.append("pdf", file);
 
     try {
-      if (currentBackend === 'supabase') {
-        await SupabaseService.createTranslation(formData);
-      } else {
-        await HerokuService.createTranslation(formData);
-      }
+      await SupabaseService.createTranslation(formData);
       alert("PDF poem uploaded successfully");
       resetForm();
       // Refresh the list
@@ -256,7 +221,6 @@ const PoemDashboard: React.FC = () => {
 
   return (
     <div className="admin-dashboard">
-      <BackendSwitcher />
       <h2>{editMode ? "Edit Poem" : "Add New Poem"}</h2>
       
       {error && <p className="error-message">{error}</p>}
