@@ -8,15 +8,13 @@
 .env.local
 .env.*.local
 
-# Migration scripts local envs
-supabase-migration/.env
-supabase-migration/.env.local
+# Migration scripts (entire directory - not needed in production)
+supabase-migration/
 
 # Node modules
 node_modules/
 /client/node_modules
 /server/node_modules
-/supabase-migration/node_modules
 
 # IDE
 .idea
@@ -28,11 +26,9 @@ client/debug-*.cjs
 
 # Package lock files (can be included or ignored based on preference)
 # Uncomment to ignore:
-# package-lock.json
-# client/package-lock.json
-# server/package-lock.json
-
-# Build outputs
+# Root package files (workspace is in client/server subdirectories)
+/package.json
+outputs
 /client/dist
 /server/dist
 /client/build
