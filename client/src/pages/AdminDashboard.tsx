@@ -92,6 +92,11 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handlePdfRedirect = () => {
+    navigate("/translation/admin", { state: { prefillTitle: "POEM " } });
+  };
+
+
   return (
     <div className="admin-dashboard">
       <BackendSwitcher />

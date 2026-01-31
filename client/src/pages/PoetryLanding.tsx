@@ -100,7 +100,7 @@ const PoetryLanding: React.FC = () => {
           .filter((pdf: { title?: string }) => pdf.title && pdf.title.startsWith("POEM"))
           .map((pdf: { _id: string; title: string }) => ({
             _id: pdf._id,
-            title: pdf.title.replace("POEM", ""), // Remove "POEM" from the title
+            title: pdf.title.replace(/\bPOEM\b\s?/g, ''), // Remove "POEM" from the title
             fileUrl: `${URL}/translations/stream/${pdf._id}`, // Build file URL
           }));
 
