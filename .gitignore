@@ -1,5 +1,4 @@
 # Environment files (secrets, keys, etc.)
-/server/.env
 /client/.env
 /client/.env.local
 /client/.env.*.local
@@ -21,15 +20,14 @@ SUPABASE_SETUP.md
 # Node modules
 node_modules/
 /client/node_modules
-/server/node_modules
 
 # IDE
 .idea
 .vscode/
 
 # Local client debug artifacts
-client/debug-heroku.pdf
 client/debug-*.cjs
+client/debug-*.pdf
 
 # Package lock files
 /package-lock.json
@@ -38,9 +36,8 @@ client/debug-*.cjs
 *.tsbuildinfo
 
 # Build outputs
-/server/dist
 /client/build
-/server/build
+dist/
 
 # OS files
 .DS_Store
@@ -51,5 +48,3 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.idea
-server/node_modules
