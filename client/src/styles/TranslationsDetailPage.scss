@@ -3,6 +3,41 @@
 
   padding: 20px;
   text-align: center;
+
+  .error-message {
+    color: #d32f2f;
+    background: #ffebee;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #ffcdd2;
+  }
+
+  .pdf-actions {
+    margin-bottom: 12px;
+
+    .open-pdf-link {
+      display: inline-block;
+      color: #00203f;
+      font-weight: bold;
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid #00203f;
+      border-radius: 6px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+
+      &:hover {
+        background-color: #00203f;
+        color: #adefd1;
+      }
+    }
+  }
+
+  iframe {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+  }
 }
 
 h2 {

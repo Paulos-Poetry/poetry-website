@@ -202,13 +202,11 @@ const PoemDashboard: React.FC = () => {
   const handleSubmitPdfPoem = async () => {
     if (!file || newPoem.title.trim() === "") return alert("Title and PDF required");
 
-    const formData = new FormData();
-    formData.append("title", `POEM${newPoem.title}`);
-    formData.append("date", new Date().toISOString());
-    formData.append("pdf", file);
-
     try {
-      await SupabaseService.createTranslation(formData);
+      await SupabaseService.createTranslation({
+        title: `POEM${newPoem.title}`,
+        file,
+      });
       alert("PDF poem uploaded successfully");
       resetForm();
       // Refresh the list

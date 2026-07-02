@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://Can1Cyp2.github.io/poetry-website",
+  "homepage": "https://paulospoetry.com",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,10 +14,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
-    "axios": "^1.7.7",
-    "bcryptjs": "^3.0.2",
-    "client": "file:",
-    "dotenv": "^16.4.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-quill": "^2.0.0",

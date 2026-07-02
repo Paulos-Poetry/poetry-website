@@ -1,5 +1,4 @@
 # Environment files (secrets, keys, etc.)
-/server/.env
 /client/.env
 /client/.env.local
 /client/.env.*.local
@@ -11,26 +10,34 @@
 # Migration scripts (entire directory - not needed in production)
 supabase-migration/
 
+# One-time database setup SQL and internal docs — keep out of the repo
+supabase/
+SUPABASE_SETUP.md
+
+# Claude Code local config
+.claude/
+
 # Node modules
 node_modules/
 /client/node_modules
-/server/node_modules
 
 # IDE
 .idea
 .vscode/
 
 # Local client debug artifacts
-client/debug-heroku.pdf
 client/debug-*.cjs
+client/debug-*.pdf
 
 # Package lock files
 /package-lock.json
 
+# TypeScript incremental build caches
+*.tsbuildinfo
+
 # Build outputs
-/server/dist
 /client/build
-/server/build
+dist/
 
 # OS files
 .DS_Store
@@ -41,5 +48,3 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.idea
-server/node_modules

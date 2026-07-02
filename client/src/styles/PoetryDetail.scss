@@ -23,6 +23,50 @@
     cursor: pointer;
     &.active {
       background-color: #adefd1;
+      color: #00203f;
     }
+  }
+
+  .like-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+
+    .like-button {
+      background-color: #00203f;
+      color: white;
+
+      &:disabled {
+        background-color: #adefd1;
+        color: #00203f;
+        cursor: default;
+      }
+    }
+
+    .like-count {
+      color: #00203f;
+      font-weight: bold;
+    }
+  }
+
+  .commenting-as {
+    color: #555;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px;
+    border: 1px solid #00203f;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1rem;
+    box-sizing: border-box;
+    margin-bottom: 10px;
   }
 }

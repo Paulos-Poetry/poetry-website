@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../styles/AdminDashboard.scss";
 import { SupabaseService } from "../services/apiService";
+import { useAuth } from "../contexts/AuthContext";
 
 interface User {
   _id: string;
@@ -14,6 +15,7 @@ const AdminDashboard: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { session } = useAuth();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -34,13 +36,23 @@ const AdminDashboard: React.FC = () => {
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
+    if (selectedUser._id === session?.user?.id) {
+      setError("You cannot delete your own account from here.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Delete user "${selectedUser.username}" (${selectedUser.email})? This cannot be undone.`
+    );
+    if (!confirmed) return;
     try {
       await SupabaseService.deleteUser(selectedUser._id);
       setUsers(users.filter((user) => user._id !== selectedUser._id));
       setSelectedUser(null);
+      setError(null);
     } catch (error) {
       console.error("Error deleting user:", error);
-      setError("Failed to delete user.");
+      const err = error as { message?: string };
+      setError(err.message || "Failed to delete user.");
     }
   };
 
@@ -52,9 +64,11 @@ const AdminDashboard: React.FC = () => {
         user._id === selectedUser._id ? { ...user, isAdmin: true } : user
       ));
       setSelectedUser(null);
+      setError(null);
     } catch (error) {
       console.error("Error promoting user to admin:", error);
-      setError("Failed to promote user.");
+      const err = error as { message?: string };
+      setError(err.message || "Failed to promote user.");
     }
   };
 
@@ -66,16 +80,13 @@ const AdminDashboard: React.FC = () => {
         user._id === selectedUser._id ? { ...user, isAdmin: false } : user
       ));
       setSelectedUser(null);
+      setError(null);
     } catch (error) {
       console.error("Error removing admin status:", error);
-      setError("Failed to remove admin status.");
+      const err = error as { message?: string };
+      setError(err.message || "Failed to remove admin status.");
     }
   };
-
-  const handlePdfRedirect = () => {
-    navigate("/translation/admin", { state: { prefillTitle: "POEM " } });
-  };
-
 
   return (
     <div className="admin-dashboard">
@@ -86,7 +97,7 @@ const AdminDashboard: React.FC = () => {
         <p>Loading users...</p>
       ) : (
         <div className="user-management">
-          <h3>Manage Users</h3>
+          <h3>Manage Users ({users.length})</h3>
           <div className="user-selection-actions">
             <select
               value={selectedUser?._id || ""}
@@ -99,7 +110,7 @@ const AdminDashboard: React.FC = () => {
               <option value="">Select a user</option>
               {users.map((user) => (
                 <option key={user._id} value={user._id}>
-                  {user.username} {user.isAdmin ? "(Admin)" : ""}
+                  {user.username} ({user.email}) {user.isAdmin ? "— Admin" : ""}
                 </option>
               ))}
             </select>

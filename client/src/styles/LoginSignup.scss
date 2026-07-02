@@ -82,6 +82,78 @@ input:focus {
   margin-bottom: 15px;
 }
 
+/* Success message */
+.success-message {
+  color: #2e7d32;
+  background-color: #e8f5e9;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+/* Logged-in note */
+.logged-in-note {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+/* Admin section styling */
+.admin-section {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.admin-toggle-button {
+  background: none;
+  border: 1px dashed #666;
+  color: #666;
+  font-size: 14px;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.admin-toggle-button:hover {
+  border-color: #00203f;
+  color: #00203f;
+  background-color: #f5f5f5;
+}
+
+.admin-form {
+  margin-top: 15px;
+}
+
+.admin-form input {
+  margin-bottom: 10px;
+}
+
+.verify-button {
+  width: 100%;
+  padding: 10px;
+  background-color: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.verify-button:hover {
+  background-color: #0d47a1;
+}
+
+.admin-status {
+  color: #2e7d32;
+  font-size: 14px;
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #e8f5e9;
+  border-radius: 4px;
+}
+
 /* Modal styling */
 .modal {
   position: fixed;

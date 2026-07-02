@@ -1,278 +1,238 @@
-import bcrypt from 'bcryptjs';
-import { createClient } from '@supabase/supabase-js';
+import { supabase, PDF_BUCKET } from "./supabaseClient";
 
-// Supabase client setup
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// ---------- Types ----------
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Types based on your REAL data structure
-export interface Translation {
-  id?: string;
-  _id?: string; // MongoDB ObjectId as string
-  title: string;
-  createdAt: Date | string; // Can be Date object or ISO string
-  created_at?: Date | string; // Supabase naming convention
-  pdf_data?: string | Buffer; // Base64 string or Buffer
-  content?: string;
-  contentType?: string;
-  content_type?: string;
-}
-
-export interface Poem {
-  id?: string;
-  _id?: string; // MongoDB ObjectId as string
-  title: string;
-  contentEnglish: string; // HTML content from React Quill
-  content_english?: string; // Supabase naming
-  contentGreek: string; // HTML content from React Quill
-  content_greek?: string; // Supabase naming
-  likes: number;
-  comments: Comment[];
-  createdAt?: Date | string;
-  created_at?: Date | string;
-  __v?: number; // MongoDB version key
+export interface Profile {
+  id: string;
+  username: string;
+  email: string;
+  isAdmin: boolean;
 }
 
 export interface Comment {
-  id?: string;
   _id?: string;
   author: string;
   text: string;
   createdAt: Date | string;
-  created_at?: Date | string;
-  poem_id?: string;
+  userId?: string | null;
 }
 
-// Supabase API service
+export interface Poem {
+  _id?: string;
+  title: string;
+  contentEnglish: string;
+  contentGreek: string;
+  likes: number;
+  comments: Comment[];
+  createdAt?: Date | string;
+}
+
+export interface Translation {
+  _id?: string;
+  title: string;
+  createdAt: Date | string;
+  content?: string | null;
+  contentType?: string | null;
+  /** Path inside the "pdfs" storage bucket (new uploads) */
+  pdfPath?: string | null;
+  /** Public URL for the PDF when stored in Supabase Storage */
+  pdfUrl?: string | null;
+  /** Legacy PDFs stored directly in the database (old migration) */
+  pdf_data?: string | null;
+}
+
+interface CommentRow {
+  id: string;
+  author: string;
+  text: string;
+  created_at: string;
+  user_id?: string | null;
+}
+
+interface PoemRow {
+  id: string;
+  title: string;
+  content_english: string;
+  content_greek: string;
+  likes: number | null;
+  created_at: string;
+  comments?: CommentRow[];
+}
+
+interface TranslationRow {
+  id: string;
+  title: string;
+  content?: string | null;
+  content_type?: string | null;
+  pdf_path?: string | null;
+  created_at: string;
+}
+
+// ---------- Helpers ----------
+
+// True when the database hasn't had supabase/setup.sql applied yet
+// (missing column errors). Lets the public pages keep working either way.
+function isMissingColumn(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  return !!e && (e.code === "42703" || /column .* does not exist/i.test(e.message || ""));
+}
+
+function publicPdfUrl(pdfPath: string | null | undefined): string | null {
+  if (!pdfPath) return null;
+  const { data } = supabase.storage.from(PDF_BUCKET).getPublicUrl(pdfPath);
+  return data?.publicUrl || null;
+}
+
+function mapComment(c: CommentRow): Comment {
+  return {
+    _id: c.id,
+    author: c.author,
+    text: c.text,
+    createdAt: c.created_at,
+    userId: c.user_id ?? null,
+  };
+}
+
 export class SupabaseService {
-  // Auth: sign up a new user using poetry_users table (client-side, not secure for production)
+  // ---------- Auth (Supabase Auth — secure, server-side password handling) ----------
+
   static async signUp(username: string, email: string, password: string) {
-    // Check if user already exists
-    const { data: existing, error: selectError } = await supabase
-      .from('poetry_users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
-    if (selectError) {
-      console.error('Supabase select error (signUp):', selectError);
-      throw selectError;
-    }
-    if (existing) throw new Error('User already exists');
-
-    // Hash password in browser (not secure for production)
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(password, salt);
-
-    // Insert new user
-    const { data, error } = await supabase
-      .from('poetry_users')
-      .insert([{ username, email, password_hash: hash }])
-      .select()
-      .maybeSingle();
-    if (error) {
-      console.error('Supabase insert error (signUp):', error);
-      throw error;
-    }
-    return data;
-  }
-
-  // Sign in using poetry_users table (client-side, not secure for production)
-  static async signIn(email: string, password: string) {
-    // Fetch user by email
-    const { data: user, error } = await supabase
-      .from('poetry_users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
-    if (error) {
-      console.error('Supabase select error (signIn):', error);
-      throw error;
-    }
-    if (!user) throw new Error('Invalid credentials');
-
-    // Compare password hash in browser
-    const match = bcrypt.compareSync(password, user.password_hash);
-    if (!match) throw new Error('Invalid credentials');
-    return user;
-  }
-
-  // Note: profile storage in poetry_users is intentionally disabled in this app.
-
-  // Translations
-  static async getAllTranslations(): Promise<Translation[]> {
-    const { data, error } = await supabase
-      .from('translations')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    if (!data) return [];
-
-    // Transform to match current interface
-  return (data as Translation[]).map(item => {
-      // Convert binary PDF data to base64 for consistent handling
-      let pdfData = item.pdf_data;
-      if (pdfData && typeof pdfData !== 'string') {
-        // Convert Uint8Array/Buffer to base64 string
-        const uint8Array = new Uint8Array(pdfData);
-        const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('');
-        pdfData = btoa(binaryString);
-      }
-
-      return {
-        _id: item.id,
-        title: item.title,
-        createdAt: item.created_at, // Keep as string/Date - let component handle conversion
-        content: item.content,
-        pdf_data: pdfData
-      } as Translation;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { username } },
     });
+    if (error) throw error;
+    // If email confirmation is enabled in Supabase, there is no session yet.
+    return { user: data.user, needsEmailConfirmation: !data.session };
   }
 
-  static async getTranslationById(id: string): Promise<Translation> {
-    const { data, error } = await supabase
-      .from('translations')
-      .select('*')
-      .eq('id', id)
-      .single();
-
+  static async signIn(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    if (!data) throw new Error('Translation not found');
+    return data.user;
+  }
 
-    // Convert binary PDF data to base64 for consistent handling
-    let pdfData = data.pdf_data;
-    if (pdfData && typeof pdfData !== 'string') {
-      try {
-        // Convert Uint8Array/Buffer to base64 string
-        const uint8Array = new Uint8Array(pdfData);
-        const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('');
-        pdfData = btoa(binaryString);
-      } catch (error) {
-        console.error('Error converting PDF to base64:', error);
-        pdfData = null; // Reset to null if conversion fails
-      }
+  static async signOut() {
+    await supabase.auth.signOut();
+  }
+
+  static async getProfile(userId: string): Promise<Profile | null> {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, username, email, is_admin")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) {
+      console.error("Error fetching profile:", error);
+      return null;
     }
-
+    if (!data) return null;
     return {
-      _id: data.id,
-      title: data.title,
-      createdAt: data.created_at, // Keep as string/Date - let component handle conversion
-      content: data.content,
-      pdf_data: pdfData
+      id: data.id,
+      username: data.username,
+      email: data.email,
+      isAdmin: !!data.is_admin,
     };
   }
 
-  // Poems
+  // Verify admin passcode — secure server-side RPC; promotes the caller only.
+  static async verifyAdminPasscode(
+    userId: string,
+    passcode: string
+  ): Promise<{ success: boolean; message: string }> {
+    const { data, error } = await supabase.rpc("verify_admin_passcode", {
+      user_id: userId,
+      provided_passcode: passcode,
+    });
+    if (error) {
+      console.error("Error verifying admin passcode:", error);
+      throw new Error("Failed to verify passcode");
+    }
+    return data as { success: boolean; message: string };
+  }
+
+  // ---------- Poems ----------
+
   static async getAllPoems(): Promise<Poem[]> {
-    const { data, error } = await supabase
-      .from('poems')
-      .select(`
-        *,
-        comments (
-          id,
-          author,
-          text,
-          created_at
+    let res = await supabase
+      .from("poems")
+      .select(
+        `id, title, content_english, content_greek, likes, created_at,
+         comments ( id, author, text, created_at, user_id )`
+      )
+      .order("created_at", { ascending: false });
+    if (res.error && isMissingColumn(res.error)) {
+      res = (await supabase
+        .from("poems")
+        .select(
+          `id, title, content_english, content_greek, likes, created_at,
+           comments ( id, author, text, created_at )`
         )
-      `)
-      .order('created_at', { ascending: false });
+        .order("created_at", { ascending: false })) as unknown as typeof res;
+    }
+    if (res.error) throw res.error;
+    const data = (res.data || []) as unknown as PoemRow[];
 
-    if (error) throw error;
-
-    return data.map(poem => ({
+    return data.map((poem) => ({
       _id: poem.id,
       title: poem.title,
       contentEnglish: poem.content_english,
       contentGreek: poem.content_greek,
-      likes: poem.likes,
-      createdAt: poem.created_at, // Keep as string/Date
-      comments: poem.comments?.map((comment: Comment) => ({
-        _id: comment.id,
-        author: comment.author,
-        text: comment.text,
-        createdAt: comment.created_at // Keep as string/Date
-      })) || []
+      likes: poem.likes ?? 0,
+      createdAt: poem.created_at,
+      comments: ((poem.comments as CommentRow[]) || []).map(mapComment),
     }));
   }
 
   static async getPoemById(id: string): Promise<Poem> {
-    const { data, error } = await supabase
-      .from('poems')
-      .select(`
-        *,
-        comments (
-          id,
-          author,
-          text,
-          created_at
-        )
-      `)
-      .eq('id', id)
+    let res = await supabase
+      .from("poems")
+      .select(
+        `id, title, content_english, content_greek, likes, created_at,
+         comments ( id, author, text, created_at, user_id )`
+      )
+      .eq("id", id)
       .single();
-
-    if (error) throw error;
+    if (res.error && isMissingColumn(res.error)) {
+      res = (await supabase
+        .from("poems")
+        .select(
+          `id, title, content_english, content_greek, likes, created_at,
+           comments ( id, author, text, created_at )`
+        )
+        .eq("id", id)
+        .single()) as unknown as typeof res;
+    }
+    if (res.error) throw res.error;
+    const data = res.data as unknown as PoemRow;
 
     return {
       _id: data.id,
       title: data.title,
       contentEnglish: data.content_english,
       contentGreek: data.content_greek,
-      likes: data.likes,
-      createdAt: data.created_at, // Keep as string/Date
-      comments: data.comments?.map((comment: Comment) => ({
-        _id: comment.id,
-        author: comment.author,
-        text: comment.text,
-        createdAt: comment.created_at // Keep as string/Date
-      })) || []
+      likes: data.likes ?? 0,
+      createdAt: data.created_at,
+      comments: ((data.comments as CommentRow[]) || []).map(mapComment),
     };
   }
 
-  static async addComment(poemId: string, author: string, text: string): Promise<Comment> {
+  static async createPoem(poem: {
+    title: string;
+    contentEnglish: string;
+    contentGreek: string;
+  }): Promise<Poem> {
     const { data, error } = await supabase
-      .from('comments')
-      .insert({
-        poem_id: poemId,
-        author,
-        text
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return {
-      _id: data.id,
-      author: data.author,
-      text: data.text,
-      createdAt: data.created_at // Keep as string/Date
-    };
-  }
-
-  static async deleteComment(commentId: string): Promise<void> {
-    const { error } = await supabase
-      .from('comments')
-      .delete()
-      .eq('id', commentId);
-
-    if (error) throw error;
-  }
-
-  // Poem CRUD operations
-  static async createPoem(poem: { title: string; contentEnglish: string; contentGreek: string }): Promise<Poem> {
-    const { data, error } = await supabase
-      .from('poems')
+      .from("poems")
       .insert({
         title: poem.title,
         content_english: poem.contentEnglish,
         content_greek: poem.contentGreek,
-        likes: 0
+        likes: 0,
       })
       .select()
       .single();
-
     if (error) throw error;
 
     return {
@@ -280,25 +240,26 @@ export class SupabaseService {
       title: data.title,
       contentEnglish: data.content_english,
       contentGreek: data.content_greek,
-      likes: data.likes,
+      likes: data.likes ?? 0,
       createdAt: data.created_at,
-      comments: []
+      comments: [],
     };
   }
 
-  static async updatePoem(id: string, poem: { title: string; contentEnglish: string; contentGreek: string }): Promise<Poem> {
+  static async updatePoem(
+    id: string,
+    poem: { title: string; contentEnglish: string; contentGreek: string }
+  ): Promise<Poem> {
     const { data, error } = await supabase
-      .from('poems')
+      .from("poems")
       .update({
         title: poem.title,
         content_english: poem.contentEnglish,
         content_greek: poem.contentGreek,
-        updated_at: new Date().toISOString()
       })
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
-
     if (error) throw error;
 
     return {
@@ -306,169 +267,279 @@ export class SupabaseService {
       title: data.title,
       contentEnglish: data.content_english,
       contentGreek: data.content_greek,
-      likes: data.likes,
+      likes: data.likes ?? 0,
       createdAt: data.created_at,
-      comments: []
+      comments: [],
     };
   }
 
   static async deletePoem(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('poems')
-      .delete()
-      .eq('id', id);
-
+    const { error } = await supabase.from("poems").delete().eq("id", id);
     if (error) throw error;
   }
 
-  // Translation CRUD operations
-  static async createTranslation(formData: FormData): Promise<Translation> {
-    const title = formData.get('title') as string;
-    const date = formData.get('date') as string;
-    const pdfFile = formData.get('pdf') as File;
+  // Atomic like counter via RPC (works for anonymous visitors too)
+  static async likePoem(id: string): Promise<number> {
+    const { data, error } = await supabase.rpc("increment_likes", {
+      poem_uuid: id,
+    });
+    if (error) throw error;
+    return data as number;
+  }
 
-    let pdfBase64: string | null = null;
-    if (pdfFile) {
-      const arrayBuffer = await pdfFile.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('');
-      pdfBase64 = btoa(binaryString);
+  // ---------- Comments ----------
+
+  static async addComment(poemId: string, author: string, text: string): Promise<Comment> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
+    if (!userId) throw new Error("You must be logged in to comment");
+
+    const { data, error } = await supabase
+      .from("comments")
+      .insert({ poem_id: poemId, author, text, user_id: userId })
+      .select()
+      .single();
+    if (error) throw error;
+    return mapComment(data as CommentRow);
+  }
+
+  static async deleteComment(commentId: string): Promise<void> {
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
+    if (error) throw error;
+  }
+
+  // ---------- Translations ----------
+  // List queries deliberately EXCLUDE pdf_data so landing pages stay fast
+  // (legacy PDFs are ~1 MB per row).
+
+  static async getAllTranslations(): Promise<Translation[]> {
+    let res = await supabase
+      .from("translations")
+      .select("id, title, content, content_type, pdf_path, created_at")
+      .order("created_at", { ascending: false });
+    if (res.error && isMissingColumn(res.error)) {
+      res = (await supabase
+        .from("translations")
+        .select("id, title, content, content_type, created_at")
+        .order("created_at", { ascending: false })) as unknown as typeof res;
+    }
+    if (res.error) throw res.error;
+    const data = (res.data || []) as unknown as TranslationRow[];
+
+    return data.map((item) => ({
+      _id: item.id,
+      title: item.title,
+      createdAt: item.created_at,
+      content: item.content,
+      contentType: item.content_type,
+      pdfPath: item.pdf_path,
+      pdfUrl: publicPdfUrl(item.pdf_path),
+    }));
+  }
+
+  static async getTranslationById(id: string): Promise<Translation> {
+    // First fetch metadata only; pull heavy pdf_data ONLY for legacy rows
+    // that have no storage file.
+    let res = await supabase
+      .from("translations")
+      .select("id, title, content, content_type, pdf_path, created_at")
+      .eq("id", id)
+      .single();
+    if (res.error && isMissingColumn(res.error)) {
+      res = (await supabase
+        .from("translations")
+        .select("id, title, content, content_type, created_at")
+        .eq("id", id)
+        .single()) as unknown as typeof res;
+    }
+    if (res.error) throw res.error;
+    const data = res.data as unknown as TranslationRow;
+
+    const result: Translation = {
+      _id: data.id,
+      title: data.title,
+      createdAt: data.created_at,
+      content: data.content,
+      contentType: data.content_type,
+      pdfPath: data.pdf_path,
+      pdfUrl: publicPdfUrl(data.pdf_path),
+    };
+
+    if (!result.pdfUrl) {
+      const { data: withPdf, error: pdfError } = await supabase
+        .from("translations")
+        .select("pdf_data")
+        .eq("id", id)
+        .single();
+      if (!pdfError && withPdf?.pdf_data) {
+        result.pdf_data = withPdf.pdf_data as string;
+      }
+    }
+    return result;
+  }
+
+  static async createTranslation(input: {
+    title: string;
+    date?: string;
+    file?: File | null;
+  }): Promise<Translation> {
+    let pdfPath: string | null = null;
+
+    if (input.file && input.file.size > 0) {
+      pdfPath = `${crypto.randomUUID()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from(PDF_BUCKET)
+        .upload(pdfPath, input.file, { contentType: "application/pdf" });
+      if (uploadError) throw uploadError;
     }
 
     const { data, error } = await supabase
-      .from('translations')
+      .from("translations")
       .insert({
-        title,
-        pdf_data: pdfBase64,
-        content_type: 'application/pdf',
-        created_at: date || new Date().toISOString()
+        title: input.title,
+        pdf_path: pdfPath,
+        content_type: pdfPath ? "application/pdf" : "text/plain",
+        created_at: input.date ? new Date(input.date).toISOString() : new Date().toISOString(),
       })
-      .select()
+      .select("id, title, content, content_type, pdf_path, created_at")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Don't leave an orphaned file behind if the row insert failed
+      if (pdfPath) {
+        await supabase.storage.from(PDF_BUCKET).remove([pdfPath]);
+      }
+      throw error;
+    }
 
     return {
       _id: data.id,
       title: data.title,
       createdAt: data.created_at,
-      pdf_data: data.pdf_data,
-      contentType: data.content_type
+      contentType: data.content_type,
+      pdfPath: data.pdf_path,
+      pdfUrl: publicPdfUrl(data.pdf_path),
     };
   }
 
-  static async updateTranslation(id: string, formData: FormData): Promise<Translation> {
-    const title = formData.get('title') as string;
-    const date = formData.get('date') as string;
-    const pdfFile = formData.get('pdf') as File | null;
+  static async updateTranslation(
+    id: string,
+    input: { title: string; date?: string; file?: File | null }
+  ): Promise<Translation> {
+    const updateData: Record<string, unknown> = { title: input.title };
+    if (input.date) updateData.created_at = new Date(input.date).toISOString();
 
-    const updateData: Record<string, unknown> = {
-      title,
-      updated_at: new Date().toISOString()
-    };
+    let newPdfPath: string | null = null;
+    let oldPdfPath: string | null = null;
 
-    if (date) {
-      updateData.created_at = date;
-    }
+    if (input.file && input.file.size > 0) {
+      const { data: existing } = await supabase
+        .from("translations")
+        .select("pdf_path")
+        .eq("id", id)
+        .single();
+      oldPdfPath = existing?.pdf_path ?? null;
 
-    if (pdfFile && pdfFile.size > 0) {
-      const arrayBuffer = await pdfFile.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('');
-      updateData.pdf_data = btoa(binaryString);
+      newPdfPath = `${crypto.randomUUID()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from(PDF_BUCKET)
+        .upload(newPdfPath, input.file, { contentType: "application/pdf" });
+      if (uploadError) throw uploadError;
+
+      updateData.pdf_path = newPdfPath;
+      updateData.pdf_data = null; // replacing a legacy in-database PDF
+      updateData.content_type = "application/pdf";
     }
 
     const { data, error } = await supabase
-      .from('translations')
+      .from("translations")
       .update(updateData)
-      .eq('id', id)
-      .select()
+      .eq("id", id)
+      .select("id, title, content, content_type, pdf_path, created_at")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (newPdfPath) await supabase.storage.from(PDF_BUCKET).remove([newPdfPath]);
+      throw error;
+    }
+
+    // Clean up the replaced storage file (best effort)
+    if (newPdfPath && oldPdfPath && oldPdfPath !== newPdfPath) {
+      await supabase.storage.from(PDF_BUCKET).remove([oldPdfPath]);
+    }
 
     return {
       _id: data.id,
       title: data.title,
       createdAt: data.created_at,
-      pdf_data: data.pdf_data,
-      contentType: data.content_type
+      contentType: data.content_type,
+      pdfPath: data.pdf_path,
+      pdfUrl: publicPdfUrl(data.pdf_path),
     };
   }
 
   static async deleteTranslation(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('translations')
-      .delete()
-      .eq('id', id);
+    const { data: existing } = await supabase
+      .from("translations")
+      .select("pdf_path")
+      .eq("id", id)
+      .single();
 
+    const { error } = await supabase.from("translations").delete().eq("id", id);
     if (error) throw error;
+
+    if (existing?.pdf_path) {
+      await supabase.storage.from(PDF_BUCKET).remove([existing.pdf_path]);
+    }
   }
 
-  // User management operations
-  static async getAllUsers(): Promise<Array<{ _id: string; username: string; email: string; isAdmin: boolean }>> {
-    const { data, error } = await supabase
-      .from('poetry_users')
-      .select('*')
-      .order('created_at', { ascending: false });
+  // ---------- User management (admin dashboard) ----------
 
+  static async getAllUsers(): Promise<
+    Array<{ _id: string; username: string; email: string; isAdmin: boolean }>
+  > {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, username, email, is_admin, created_at")
+      .order("created_at", { ascending: false });
     if (error) throw error;
 
-    return (data || []).map(user => ({
+    return (data || []).map((user) => ({
       _id: user.id,
       username: user.username,
       email: user.email,
-      isAdmin: user.is_admin || false
+      isAdmin: !!user.is_admin,
     }));
   }
 
   static async deleteUser(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('poetry_users')
-      .delete()
-      .eq('id', id);
-
+    const { data, error } = await supabase.rpc("admin_delete_user", {
+      target_user_id: id,
+    });
     if (error) throw error;
+    const result = data as { success: boolean; message: string };
+    if (!result.success) throw new Error(result.message);
   }
 
   static async makeUserAdmin(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('poetry_users')
-      .update({ is_admin: true })
-      .eq('id', id);
-
+    const { data, error } = await supabase.rpc("set_user_admin", {
+      target_user_id: id,
+      make_admin: true,
+    });
     if (error) throw error;
+    const result = data as { success: boolean; message: string };
+    if (!result.success) throw new Error(result.message);
   }
 
   static async removeUserAdmin(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('poetry_users')
-      .update({ is_admin: false })
-      .eq('id', id);
-
+    const { data, error } = await supabase.rpc("set_user_admin", {
+      target_user_id: id,
+      make_admin: false,
+    });
     if (error) throw error;
-  }
-
-  // Like poem
-  static async likePoem(id: string): Promise<number> {
-    // First get current likes
-    const { data: poem, error: fetchError } = await supabase
-      .from('poems')
-      .select('likes')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const newLikes = (poem.likes || 0) + 1;
-
-    const { error: updateError } = await supabase
-      .from('poems')
-      .update({ likes: newLikes })
-      .eq('id', id);
-
-    if (updateError) throw updateError;
-
-    return newLikes;
+    const result = data as { success: boolean; message: string };
+    if (!result.success) throw new Error(result.message);
   }
 }
+
+export { supabase };
