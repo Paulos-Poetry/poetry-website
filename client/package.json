@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist --nojekyll --cname paulospoetry.com"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
