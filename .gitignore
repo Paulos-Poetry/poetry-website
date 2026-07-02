@@ -10,6 +10,10 @@
 # Migration scripts (entire directory - not needed in production)
 supabase-migration/
 
+# Facebook importer: secrets and generated review reports
+facebook-import/.env
+facebook-import/import-report.json
+
 # One-time database setup SQL and internal docs — keep out of the repo
 supabase/
 SUPABASE_SETUP.md
