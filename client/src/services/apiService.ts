@@ -136,22 +136,6 @@ export class SupabaseService {
     };
   }
 
-  // Verify admin passcode — secure server-side RPC; promotes the caller only.
-  static async verifyAdminPasscode(
-    userId: string,
-    passcode: string
-  ): Promise<{ success: boolean; message: string }> {
-    const { data, error } = await supabase.rpc("verify_admin_passcode", {
-      user_id: userId,
-      provided_passcode: passcode,
-    });
-    if (error) {
-      console.error("Error verifying admin passcode:", error);
-      throw new Error("Failed to verify passcode");
-    }
-    return data as { success: boolean; message: string };
-  }
-
   // ---------- Poems ----------
 
   static async getAllPoems(): Promise<Poem[]> {

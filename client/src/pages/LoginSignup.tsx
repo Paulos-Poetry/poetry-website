@@ -11,13 +11,11 @@ const LoginSignup: React.FC = () => {
     email: "",
     password: "",
   });
-  const [adminPasscode, setAdminPasscode] = useState("");
-  const [showAdminInput, setShowAdminInput] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { session, isLoggedIn, isAdmin, refreshProfile, loading } = useAuth();
+  const { session, isLoggedIn, isAdmin, loading } = useAuth();
 
   // Handle form field changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,39 +54,6 @@ const LoginSignup: React.FC = () => {
       );
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  // Handle admin passcode verification
-  const handleAdminVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const userId = session?.user?.id;
-    if (!userId) {
-      setErrorMessage("You must be logged in to verify an admin passcode");
-      return;
-    }
-
-    try {
-      const result = await SupabaseService.verifyAdminPasscode(
-        userId,
-        adminPasscode
-      );
-      if (result.success) {
-        await refreshProfile();
-        setSuccessMessage("Admin privileges granted! Redirecting...");
-        setErrorMessage("");
-        setAdminPasscode("");
-        setTimeout(() => {
-          navigate("/admin");
-        }, 1500);
-      } else {
-        setErrorMessage(result.message || "Invalid passcode");
-        setSuccessMessage("");
-      }
-    } catch (error) {
-      const err = error as { message?: string };
-      setErrorMessage(err.message || "Failed to verify passcode");
-      setSuccessMessage("");
     }
   };
 
@@ -166,32 +131,7 @@ const LoginSignup: React.FC = () => {
               You are logged in as <strong>{session?.user?.email}</strong>.
             </p>
 
-            {/* Admin Passcode Section - only for logged-in non-admin users */}
-            {!isAdmin ? (
-              <div className="admin-section">
-                <button
-                  className="admin-toggle-button"
-                  onClick={() => setShowAdminInput(!showAdminInput)}
-                >
-                  {showAdminInput ? "Hide Admin Access" : "Have an Admin Passcode?"}
-                </button>
-
-                {showAdminInput && (
-                  <form onSubmit={handleAdminVerification} className="admin-form">
-                    <input
-                      type="password"
-                      placeholder="Enter Admin Passcode"
-                      value={adminPasscode}
-                      onChange={(e) => setAdminPasscode(e.target.value)}
-                      required
-                    />
-                    <button type="submit" className="verify-button">
-                      Verify Passcode
-                    </button>
-                  </form>
-                )}
-              </div>
-            ) : (
+            {isAdmin && (
               <p className="admin-status">✓ You have admin privileges</p>
             )}
           </>
