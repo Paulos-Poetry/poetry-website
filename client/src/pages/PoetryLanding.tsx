@@ -93,9 +93,10 @@ const PoetryLanding: React.FC = () => {
   }, [fetchPoemsAndPdfs]);
 
   // Language availability rank used for the "sort by language" options:
-  // poems in the chosen language first, then the other language, PDFs last.
+  // poems in the chosen language first, then the other language.
+  // (PDFs never reach this — their language can't be determined, so they're
+  // set aside into their own section instead. See isLanguageFocused below.)
   const languageRank = (poem: PoemCard, lang: Language): number => {
-    if (poem.isPdf) return 2;
     const has =
       lang === "english"
         ? hasValidContent(poem.contentEnglish)
@@ -103,36 +104,11 @@ const PoetryLanding: React.FC = () => {
     return has ? 0 : 1;
   };
 
-  // Apply search + filters + sorting
-  const visiblePoems = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    let filtered = poems;
-
-    if (query) {
-      filtered = filtered.filter((p) => p.title.toLowerCase().includes(query));
-    }
-
-    if (typeFilter === "written") filtered = filtered.filter((p) => !p.isPdf);
-    if (typeFilter === "pdf") filtered = filtered.filter((p) => p.isPdf);
-
-    if (languageFilter === "english") {
-      filtered = filtered.filter(
-        (p) => !p.isPdf && hasValidContent(p.contentEnglish)
-      );
-    } else if (languageFilter === "greek") {
-      filtered = filtered.filter(
-        (p) => !p.isPdf && hasValidContent(p.contentGreek)
-      );
-    }
-
+  const sortByTitleOrDate = (list: PoemCard[], by: SortOption): PoemCard[] => {
     const byNewest = (a: PoemCard, b: PoemCard) =>
       new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-
-    const sorted = [...filtered];
-    switch (sortBy) {
-      case "newest":
-        sorted.sort(byNewest);
-        break;
+    const sorted = [...list];
+    switch (by) {
       case "oldest":
         sorted.sort((a, b) => byNewest(b, a));
         break;
@@ -142,22 +118,64 @@ const PoetryLanding: React.FC = () => {
       case "title-za":
         sorted.sort((a, b) => b.title.localeCompare(a.title, ["en", "el"]));
         break;
+      default:
+        sorted.sort(byNewest);
+    }
+    return sorted;
+  };
+
+  // A PDF's text can't be read, so its language can't be determined. Any
+  // time a language filter or a language-based sort is active, PDFs are
+  // pulled out of the normal results and listed separately at the bottom
+  // instead of being silently included or excluded.
+  const isLanguageFocused =
+    languageFilter !== "all" || sortBy === "language-en" || sortBy === "language-gr";
+
+  // Apply search + filters + sorting
+  const { visiblePoems, undeterminedPdfs } = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    let base = poems;
+
+    if (query) {
+      base = base.filter((p) => p.title.toLowerCase().includes(query));
+    }
+    if (typeFilter === "written") base = base.filter((p) => !p.isPdf);
+    if (typeFilter === "pdf") base = base.filter((p) => p.isPdf);
+
+    const pdfsSetAside = isLanguageFocused ? base.filter((p) => p.isPdf) : [];
+    let filtered = isLanguageFocused ? base.filter((p) => !p.isPdf) : base;
+
+    if (languageFilter === "english") {
+      filtered = filtered.filter((p) => hasValidContent(p.contentEnglish));
+    } else if (languageFilter === "greek") {
+      filtered = filtered.filter((p) => hasValidContent(p.contentGreek));
+    }
+
+    let sorted = [...filtered];
+    switch (sortBy) {
       case "language-en":
         sorted.sort(
           (a, b) =>
             languageRank(a, "english") - languageRank(b, "english") ||
-            byNewest(a, b)
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
         );
         break;
       case "language-gr":
         sorted.sort(
           (a, b) =>
-            languageRank(a, "greek") - languageRank(b, "greek") || byNewest(a, b)
+            languageRank(a, "greek") - languageRank(b, "greek") ||
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
         );
         break;
+      default:
+        sorted = sortByTitleOrDate(sorted, sortBy);
     }
-    return sorted;
-  }, [poems, search, sortBy, languageFilter, typeFilter]);
+
+    return {
+      visiblePoems: sorted,
+      undeterminedPdfs: sortByTitleOrDate(pdfsSetAside, sortBy),
+    };
+  }, [poems, search, sortBy, languageFilter, typeFilter, isLanguageFocused]);
 
   // Choose which language to show on a card: the preferred one, falling
   // back to the other with a small "no translation" note.
@@ -192,6 +210,26 @@ const PoetryLanding: React.FC = () => {
     }
     return <div className="poem-snippet"><i>(No content available)</i></div>;
   };
+
+  const renderPdfCard = (poem: PoemCard) =>
+    poem.pdfUrl ? (
+      // PDF stored in Supabase Storage — open directly
+      <a
+        href={poem.pdfUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="poetry-card-link"
+      >
+        <h1 className="poem-title">{poem.title}</h1>
+        <p className="read-more">View PDF</p>
+      </a>
+    ) : (
+      // Legacy PDF stored in the database — view through detail page
+      <Link to={`/translations/${poem._id}`} className="poetry-card-link">
+        <h1 className="poem-title">{poem.title}</h1>
+        <p className="read-more">View PDF</p>
+      </Link>
+    );
 
   return (
     <div className="poetry-landing">
@@ -261,37 +299,21 @@ const PoetryLanding: React.FC = () => {
         </div>
       </div>
 
-      {!loading && visiblePoems.length === 0 && !error && (
-        <p className="empty-message">No poems found.</p>
-      )}
+      {!loading &&
+        visiblePoems.length === 0 &&
+        undeterminedPdfs.length === 0 &&
+        !error && <p className="empty-message">No poems found.</p>}
 
       <ul className="poetry-list">
         {visiblePoems.map((poem) => (
           <li key={poem._id} className="poetry-card">
+            {/* When no language filter/sort is active, PDFs stay mixed in
+                here (isLanguageFocused false). Otherwise this list only
+                ever contains regular poems — PDFs move to the section
+                below instead. */}
             {poem.isPdf ? (
-              poem.pdfUrl ? (
-                // PDF stored in Supabase Storage — open directly
-                <a
-                  href={poem.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="poetry-card-link"
-                >
-                  <h1 className="poem-title">{poem.title}</h1>
-                  <p className="read-more">View PDF</p>
-                </a>
-              ) : (
-                // Legacy PDF stored in the database — view through detail page
-                <Link
-                  to={`/translations/${poem._id}`}
-                  className="poetry-card-link"
-                >
-                  <h1 className="poem-title">{poem.title}</h1>
-                  <p className="read-more">View PDF</p>
-                </Link>
-              )
+              renderPdfCard(poem)
             ) : (
-              // Regular poems
               <Link to={`/poetry/${poem._id}`} className="poetry-card-link">
                 <h1 className="poem-title">{poem.title}</h1>
                 {renderSnippet(poem)}
@@ -301,6 +323,25 @@ const PoetryLanding: React.FC = () => {
           </li>
         ))}
       </ul>
+
+      {/* PDF poems can't be read to tell whether they're English or Greek,
+          so when a language filter/sort is in effect they're listed here
+          instead of being silently hidden or mixed in. */}
+      {isLanguageFocused && undeterminedPdfs.length > 0 && (
+        <div className="pdf-language-section">
+          <p className="pdf-language-note">
+            PDF poems cannot be determined as Greek or English, so they're
+            listed separately below:
+          </p>
+          <ul className="poetry-list">
+            {undeterminedPdfs.map((poem) => (
+              <li key={poem._id} className="poetry-card">
+                {renderPdfCard(poem)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
