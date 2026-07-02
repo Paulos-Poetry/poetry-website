@@ -15,14 +15,14 @@
   animation: fadeIn 2s ease forwards;
 
   h1 {
-    font-size: 5em;
+    font-size: clamp(2.5rem, 6vw, 5rem);
     color: $primary-color;
     font-family: "Edu AU VIC WA NT Guides", sans-serif;
     margin-bottom: 40px;
   }
 
   p {
-    font-size: 2.2em;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
     color: rgb(0, 0, 104);
     max-width: 90%;
     line-height: 1.7;
@@ -46,32 +46,87 @@
 /* New bio section under the Home page */
 .bio-section {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: clamp(2rem, 5vw, 6rem);
   width: 100%;
-  height: 100vh; /* Full viewport height */
-  padding: 50px;
+  min-height: 80vh;
+  padding: clamp(2rem, 5vw, 6rem);
   box-sizing: border-box;
-  background-color: #f5f5f5; /* Background color for contrast */
+  background-color: #f5f5f5;
 
   .bio-text {
     flex: 1;
-    font-size: 1.5em;
+    max-width: 600px;
+    font-size: clamp(1.4rem, 2.5vw, 2.2rem);
     color: #00203f;
-    line-height: 1.6;
-    padding-right: 40px;
-    font-family: "Caveat", cursive; /* Use Caveat font for text styling */
+    line-height: 1.8;
+    font-family: "Caveat", cursive;
+    text-align: left;
+
+    p {
+      margin: 0;
+    }
   }
 
   .bio-image {
-    flex: 1;
+    flex: 0 1 auto;
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    align-items: center;
 
     img {
-      max-width: 100%;
+      width: clamp(250px, 30vw, 450px);
       height: auto;
-      border-radius: 8px; /* Slight border radius for styling */
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      object-fit: cover;
+    }
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .bio-section {
+    flex-direction: column-reverse;
+    text-align: center;
+    gap: 2rem;
+
+    .bio-text {
+      text-align: center;
+      max-width: 100%;
+    }
+
+    .bio-image {
+      img {
+        width: clamp(200px, 60vw, 350px);
+      }
+    }
+  }
+}
+
+@media (min-width: 1600px) {
+  .bio-section {
+    .bio-text {
+      font-size: 2.4rem;
+      max-width: 700px;
+    }
+
+    .bio-image img {
+      width: 500px;
+    }
+  }
+}
+
+@media (min-width: 2000px) {
+  .bio-section {
+    .bio-text {
+      font-size: 2.8rem;
+      max-width: 800px;
+    }
+
+    .bio-image img {
+      width: 550px;
     }
   }
 }

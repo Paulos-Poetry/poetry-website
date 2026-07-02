@@ -36,7 +36,7 @@ const TranslationDashboard: React.FC = () => {
       setTranslations(data.map(t => ({
         _id: t._id || '',
         title: t.title,
-        contentType: t.contentType || t.content_type,
+        contentType: t.contentType || undefined,
         date: t.createdAt ? String(t.createdAt) : undefined
       })));
     } catch (error) {
@@ -60,17 +60,13 @@ const TranslationDashboard: React.FC = () => {
   const handleSubmitTranslation = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("date", date);
-
-    if (file) {
-      formData.append("pdf", file);
-    }
-
     try {
       if (editMode && selectedTranslation) {
-        await SupabaseService.updateTranslation(selectedTranslation._id, formData);
+        await SupabaseService.updateTranslation(selectedTranslation._id, {
+          title,
+          date,
+          file,
+        });
         setTranslations(
           translations.map((trans) =>
             trans._id === selectedTranslation._id
@@ -79,13 +75,19 @@ const TranslationDashboard: React.FC = () => {
           )
         );
       } else {
-        const response = await SupabaseService.createTranslation(formData);
+        const response = await SupabaseService.createTranslation({
+          title,
+          date,
+          file,
+        });
         setTranslations([...translations, { _id: response._id || '', title: response.title, date: response.createdAt ? String(response.createdAt) : undefined }]);
       }
       resetForm();
+      setError(null);
     } catch (error) {
       console.error("Error saving translation:", error);
-      setError("Failed to save translation.");
+      const err = error as { message?: string };
+      setError(err.message || "Failed to save translation.");
     }
   };
 
@@ -101,7 +103,8 @@ const TranslationDashboard: React.FC = () => {
     const translation = translations.find((t) => t._id === translationId);
     if (translation) {
       setTitle(translation.title);
-      setDate(translation.date || "");
+      // Date inputs need the yyyy-MM-dd part only
+      setDate((translation.date || "").slice(0, 10));
       setSelectedTranslation(translation);
       setEditMode(true);
     }
@@ -109,6 +112,10 @@ const TranslationDashboard: React.FC = () => {
 
   const handleDeleteTranslation = async () => {
     if (selectedTranslation) {
+      const confirmed = window.confirm(
+        `Delete "${selectedTranslation.title}"? This cannot be undone.`
+      );
+      if (!confirmed) return;
       try {
         await SupabaseService.deleteTranslation(selectedTranslation._id);
         setTranslations(

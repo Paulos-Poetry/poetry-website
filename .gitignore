@@ -11,6 +11,13 @@
 # Migration scripts (entire directory - not needed in production)
 supabase-migration/
 
+# One-time database setup SQL and internal docs — keep out of the repo
+supabase/
+SUPABASE_SETUP.md
+
+# Claude Code local config
+.claude/
+
 # Node modules
 node_modules/
 /client/node_modules
@@ -26,6 +33,9 @@ client/debug-*.cjs
 
 # Package lock files
 /package-lock.json
+
+# TypeScript incremental build caches
+*.tsbuildinfo
 
 # Build outputs
 /server/dist

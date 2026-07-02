@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "../styles/Navbar.scss"; // Assuming your styles are in this file
-import { BASE_URL } from "../constants";
+import "../styles/Navbar.scss";
+import { useAuth } from "../contexts/AuthContext";
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false); // State to control navbar visibility
   const menuRef = useRef<HTMLDivElement>(null); // Ref for the navbar menu
   const navigate = useNavigate();
+  const { isLoggedIn, isAdmin, signOut } = useAuth();
 
   // Toggle the menu visibility
   const toggleMenu = () => {
@@ -14,23 +15,11 @@ const Navbar: React.FC = () => {
   };
 
   // Handle logout and redirect to login page
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    sessionStorage.removeItem("token");
-    localStorage.removeItem("isAdmin");
-    sessionStorage.removeItem("isAdmin");
-    localStorage.removeItem("userId");
-    sessionStorage.removeItem("userId");
-    navigate("/login"); // Redirect to login page after logout
-    setIsOpen(false); // Close the menu after logout
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+    setIsOpen(false);
   };
-
-  // Check if the user is logged in and if the user is an admin
-  const isLoggedIn =
-    !!localStorage.getItem("token") || !!sessionStorage.getItem("token");
-  const isAdmin =
-    localStorage.getItem("isAdmin") === "true" ||
-    sessionStorage.getItem("isAdmin") === "true";
 
   // Close the menu if the user clicks outside of it
   useEffect(() => {
@@ -62,17 +51,17 @@ const Navbar: React.FC = () => {
       <div className={`navbar-menu ${isOpen ? "open" : ""}`} ref={menuRef}>
         <ul>
           <li>
-            <Link to={BASE_URL + "/"} onClick={toggleMenu}>
+            <Link to="/" onClick={toggleMenu}>
               Home
             </Link>
           </li>
           <li>
-            <Link to={BASE_URL + "/poetry"} onClick={toggleMenu}>
+            <Link to="/poetry" onClick={toggleMenu}>
               Poetry
             </Link>
           </li>
           <li>
-            <Link to={BASE_URL + "/translations"} onClick={toggleMenu}>
+            <Link to="/translations" onClick={toggleMenu}>
               Translations
             </Link>
           </li>
@@ -84,17 +73,17 @@ const Navbar: React.FC = () => {
             <>
               <li className="admin-subheader">Admin</li>
               <li>
-                <Link to={BASE_URL + "/admin"} onClick={toggleMenu}>
+                <Link to="/admin" onClick={toggleMenu}>
                   User Management
                 </Link>
               </li>
               <li>
-                <Link to={BASE_URL + "/admin/poems"} onClick={toggleMenu}>
+                <Link to="/admin/poems" onClick={toggleMenu}>
                   Poem Management
                 </Link>
               </li>
               <li>
-                <Link to={BASE_URL + "/admin/translations"} onClick={toggleMenu}>
+                <Link to="/admin/translations" onClick={toggleMenu}>
                   Translation Management
                 </Link>
               </li>
@@ -108,7 +97,7 @@ const Navbar: React.FC = () => {
             </li>
           ) : (
             <li>
-              <Link to={BASE_URL + "/login"} onClick={toggleMenu}>
+              <Link to="/login" onClick={toggleMenu}>
                 Login
               </Link>
             </li>
